@@ -1,4 +1,4 @@
-package dbconv
+package main
 
 import (
 	"bufio"
@@ -12,35 +12,6 @@ import (
 	"regexp"
 )
 
-// DictEntry is a single entry in the JMdict dictionary.
-type DictEntry struct {
-	Sequence      int            `xml:"ent_seq"`
-	KanjiReadings []KanjiReading `xml:"k_ele"`
-	KanaReadings  []KanaReading  `xml:"r_ele"`
-	Senses        []Sense        `xml:"sense"`
-}
-
-// KanjiReading is a reading for an entry using kanji or other non-kana
-// characters.
-type KanjiReading struct {
-	Reading  string   `xml:"keb"`
-	Info     []string `xml:"ke_inf"`
-	Priority []string `xml:"ke_pri"`
-}
-
-// KanaReading is a reading for an entry using kana.
-type KanaReading struct {
-	Reading      string   `xml:"reb"`
-	NoKanji      NoKanji  `xml:"re_nokanji"`
-	Restrictions []string `xml:"re_restr"`
-	Info         []string `xml:"re_inf"`
-	Priority     []string `xml:"re_pri"`
-}
-
-// NoKanji is a boolean indicating whether a kana reading is not a "true"
-// reading of the kanji.
-type NoKanji bool
-
 // UnmarshalXML unmarshals a NoKanji from XML. This always returns true, since
 // the element will be omitted if the value is intended to be false.
 func (nk *NoKanji) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -50,32 +21,6 @@ func (nk *NoKanji) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	*nk = true
 	return nil
 }
-
-// Sense is a sense of a dictionary entry.
-type Sense struct {
-	KanjiRestrictions []string     `xml:"stagk"`
-	KanaRestrictions  []string     `xml:"stagr"`
-	CrossReferences   []string     `xml:"xref"`
-	Antonyms          []string     `xml:"ant"`
-	PartsOfSpeech     []string     `xml:"pos"`
-	Fields            []string     `xml:"field"`
-	Misc              []string     `xml:"misc"`
-	LoanSources       []LoanSource `xml:"lsource"`
-	Dialects          []string     `xml:"dial"`
-	Glosses           []Gloss      `xml:"gloss"`
-	Info              []string     `xml:"s_inf"`
-}
-
-// LoanSource is a description of the source of a loan word.
-type LoanSource struct {
-	Source             string             `xml:",chardata"`
-	Language           Language           `xml:"xml:lang,attr"`
-	PartialDescription PartialDescription `xml:"ls_type,attr"`
-	Wasei              Wasei              `xml:"ls_wasei,attr"`
-}
-
-// Language is a three-letter language code from the ISO 639-2 standard.
-type Language string
 
 // UnmarshalXMLAttr unmarshals a Language from an XML attribute.
 func (lang *Language) UnmarshalXMLAttr(a xml.Attr) error {
@@ -89,31 +34,16 @@ func (lang *Language) UnmarshalXMLAttr(a xml.Attr) error {
 	return nil
 }
 
-// PartialDescription is a boolean indicating whether the loan source only
-// partially describes the source of the associated word or phrase.
-type PartialDescription bool
-
 // UnmarshalXMLAttr unmarshals a PartialDescription from an XML attribute.
 func (pd *PartialDescription) UnmarshalXMLAttr(a xml.Attr) error {
 	*pd = a.Value == "part"
 	return nil
 }
 
-// Wasei is a boolean indicating whether the entry is "wasei" (made from foreign
-// language components but not an actual word or phrase in that language).
-type Wasei bool
-
 // UnmarshalXMLAttr unmarshals a Wasei from an XML attribute.
 func (w *Wasei) UnmarshalXMLAttr(a xml.Attr) error {
 	*w = a.Value == "y"
 	return nil
-}
-
-// Gloss is a gloss of a word or phrase in another language.
-type Gloss struct {
-	Gloss  string `xml:",chardata"`
-	Gender string `xml:"g_gend,attr"`
-	Type   string `xml:"g_type,attr"`
 }
 
 // ConvertJMdict converts the JMdict data from XML to a SQLite database.
@@ -147,7 +77,7 @@ func ConvertJMdict(xmlPath string, dbPath string) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Entry insert statement: %v", err)
 	}
-	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?)")
+	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare Lookup insert statement: %v", err)
 	}
@@ -227,8 +157,9 @@ func createJMdictTables(db *sql.DB) error {
 	}
 
 	_, err = db.Exec(`CREATE TABLE Lookup (
-		key TEXT NOT NULL COLLATE NOCASE,
-		id  INTEGER NOT NULL REFERENCES Entry(id)
+		key  TEXT NOT NULL COLLATE NOCASE,
+		type TEXT NOT NULL,
+		id   INTEGER NOT NULL REFERENCES Entry(id)
 	)`)
 	if err != nil {
 		return fmt.Errorf("could not create JMdict lookup table: %v", err)
@@ -252,25 +183,25 @@ func convertDictEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry
 		return fmt.Errorf("could not marshal entry JSON: %v", err)
 	}
 
-	_, err = insertEntry.Exec(entry.Sequence, data)
+	_, err = insertEntry.Exec(entry.ID, data)
 	if err != nil {
 		return fmt.Errorf("could not insert Entry data: %v", err)
 	}
 	for _, kanji := range entry.KanjiReadings {
-		_, err = insertLookup.Exec(kanji.Reading, entry.Sequence)
+		_, err = insertLookup.Exec(kanji.Reading, "kanji", entry.ID)
 		if err != nil {
 			return fmt.Errorf("could not insert Lookup data for kanji: %v", err)
 		}
 	}
 	for _, kana := range entry.KanaReadings {
-		_, err = insertLookup.Exec(kana.Reading, entry.Sequence)
+		_, err = insertLookup.Exec(kana.Reading, "kana", entry.ID)
 		if err != nil {
 			return fmt.Errorf("could not insert Lookup data for kana: %v", err)
 		}
 	}
 	for _, sense := range entry.Senses {
 		for _, gloss := range sense.Glosses {
-			_, err := insertLookup.Exec(gloss.Gloss, entry.Sequence)
+			_, err := insertLookup.Exec(gloss.Gloss, "gloss", entry.ID)
 			if err != nil {
 				return fmt.Errorf("could not insert Lookup data for gloss: %v", err)
 			}

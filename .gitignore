@@ -1,4 +1,5 @@
 /data/
 
 *.sqlite
+*.sqlite-journal
 gjisho
