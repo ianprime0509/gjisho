@@ -13,9 +13,15 @@ func main() {
 	switch os.Args[1] {
 	case "convert":
 		convert(args)
+	case "launch":
+		launch(args)
 	case "search":
 		search(args)
 	}
+}
+
+func launch(args []string) {
+	LaunchGUI(args)
 }
 
 func convert(args []string) {
