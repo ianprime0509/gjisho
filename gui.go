@@ -11,6 +11,10 @@ import (
 
 const appID = "com.github.ianprime0509.gjisho"
 
+type hideable interface {
+	Hide()
+}
+
 var aboutDialog *gtk.AboutDialog
 var searchRevealer *gtk.Revealer
 
@@ -20,6 +24,8 @@ var appComponents = map[string]interface{}{
 }
 
 var signals = map[string]interface{}{
+	"hideWidget":  hideable.Hide,
+	"inhibitNext": func() bool { return true },
 	"toggleSearch": func() {
 		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
 	},
