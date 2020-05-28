@@ -10,13 +10,15 @@ import (
 
 func main() {
 	args := os.Args[2:]
-	switch os.Args[1] {
+	switch cmd := os.Args[1]; cmd {
 	case "convert":
 		convert(args)
 	case "launch":
 		launch(args)
 	case "search":
 		search(args)
+	default:
+		log.Fatalf("Unknown sub-command: %v", cmd)
 	}
 }
 
@@ -39,5 +41,7 @@ func search(args []string) {
 	if err != nil {
 		log.Fatalf("Search error: %v", err)
 	}
-	fmt.Println(len(entries))
+	for _, entry := range entries {
+		fmt.Println(entry)
+	}
 }

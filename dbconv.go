@@ -22,18 +22,6 @@ func (nk *NoKanji) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-// UnmarshalXMLAttr unmarshals a Language from an XML attribute.
-func (lang *Language) UnmarshalXMLAttr(a xml.Attr) error {
-	if a.Value == "" {
-		*lang = "eng"
-	} else if len(a.Value) != 3 {
-		return xml.UnmarshalError(fmt.Sprintf("invalid language code: %v", a.Value))
-	} else {
-		*lang = Language(a.Value)
-	}
-	return nil
-}
-
 // UnmarshalXMLAttr unmarshals a PartialDescription from an XML attribute.
 func (pd *PartialDescription) UnmarshalXMLAttr(a xml.Attr) error {
 	*pd = a.Value == "part"
@@ -77,7 +65,7 @@ func ConvertJMdict(xmlPath string, dbPath string) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Entry insert statement: %v", err)
 	}
-	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?)")
+	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare Lookup insert statement: %v", err)
 	}
@@ -156,18 +144,15 @@ func createJMdictTables(db *sql.DB) error {
 		return fmt.Errorf("could not create JMdict entry table: %v", err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE Lookup (
-		key  TEXT NOT NULL COLLATE NOCASE,
-		type TEXT NOT NULL,
-		id   INTEGER NOT NULL REFERENCES Entry(id)
+	_, err = db.Exec(`CREATE VIRTUAL TABLE Lookup USING FTS5 (
+		key,
+		type          UNINDEXED,
+		heading       UNINDEXED,
+		gloss_summary UNINDEXED,
+		id            UNINDEXED
 	)`)
 	if err != nil {
 		return fmt.Errorf("could not create JMdict lookup table: %v", err)
-	}
-
-	_, err = db.Exec(`CREATE INDEX Lookup_key ON Lookup(key)`)
-	if err != nil {
-		return fmt.Errorf("could not create JMdict lookup index: %v", err)
 	}
 
 	return nil
@@ -187,21 +172,27 @@ func convertDictEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry
 	if err != nil {
 		return fmt.Errorf("could not insert Entry data: %v", err)
 	}
+
+	heading := entry.Heading()
+	glossSummary := entry.GlossSummary()
 	for _, kanji := range entry.KanjiReadings {
-		_, err = insertLookup.Exec(kanji.Reading, "kanji", entry.ID)
+		_, err = insertLookup.Exec(kanji.Reading, "kanji", heading, glossSummary, entry.ID)
 		if err != nil {
 			return fmt.Errorf("could not insert Lookup data for kanji: %v", err)
 		}
 	}
 	for _, kana := range entry.KanaReadings {
-		_, err = insertLookup.Exec(kana.Reading, "kana", entry.ID)
+		_, err = insertLookup.Exec(kana.Reading, "kana", heading, glossSummary, entry.ID)
 		if err != nil {
 			return fmt.Errorf("could not insert Lookup data for kana: %v", err)
 		}
 	}
 	for _, sense := range entry.Senses {
 		for _, gloss := range sense.Glosses {
-			_, err := insertLookup.Exec(gloss.Gloss, "gloss", entry.ID)
+			if gloss.Language != "" {
+				continue
+			}
+			_, err := insertLookup.Exec(gloss.Gloss, "gloss", heading, glossSummary, entry.ID)
 			if err != nil {
 				return fmt.Errorf("could not insert Lookup data for gloss: %v", err)
 			}

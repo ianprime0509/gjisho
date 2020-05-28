@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // JMdict is the JMdict database, containing data on Japanese words and phrases.
@@ -20,7 +21,7 @@ func OpenJMdict(path string) (*JMdict, error) {
 		return nil, fmt.Errorf("could not open JMdict database: %v", err)
 	}
 
-	lookupQuery, err := db.Prepare("SELECT key, type, id FROM Lookup WHERE key LIKE ?")
+	lookupQuery, err := db.Prepare("SELECT key, type, heading, gloss_summary, id FROM Lookup WHERE key MATCH ?")
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -37,49 +38,50 @@ func (dict *JMdict) Close() error {
 	return dict.db.Close()
 }
 
-// Fetch returns the dictionary entries with the given IDs.
-func (dict *JMdict) Fetch(ids []int) ([]DictEntry, error) {
-	var entries []DictEntry
-	for _, id := range ids {
-		row := dict.fetchQuery.QueryRow(id)
-
-		var data []byte
-		if err := row.Scan(&data); err != nil {
-			return nil, fmt.Errorf("scan error: %v", err)
-		}
-
-		var entry DictEntry
-		if err := json.Unmarshal(data, &entry); err != nil {
-			return nil, fmt.Errorf("could not unmarshal data: %v", err)
-		}
-		entries = append(entries, entry)
+// Fetch returns the dictionary entry with the given ID.
+func (dict *JMdict) Fetch(id int) (DictEntry, error) {
+	var data []byte
+	if err := dict.fetchQuery.QueryRow(id).Scan(&data); err != nil {
+		return DictEntry{}, fmt.Errorf("scan error: %v", err)
 	}
-	return entries, nil
+
+	var entry DictEntry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return DictEntry{}, fmt.Errorf("could not unmarshal data: %v", err)
+	}
+	return entry, nil
 }
 
-// Lookup returns the IDs of all dictionary entries corresponding to the given
-// query.
-func (dict *JMdict) Lookup(query string) ([]int, error) {
+// Lookup looks up dictionary entries according to the given query.
+func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
 	rows, err := dict.lookupQuery.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %v", err)
 	}
 	defer rows.Close()
 
-	var ids []int
+	var entries []LookupEntry
 	for rows.Next() {
-		var _key, _typ string
-		var id int
-		if err := rows.Scan(&_key, &_typ, &id); err != nil {
+		var entry LookupEntry
+		if err := rows.Scan(&entry.Key, &entry.Type, &entry.Heading, &entry.GlossSummary, &entry.ID); err != nil {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
-		ids = append(ids, id)
+		entries = append(entries, entry)
 	}
 
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
-	return ids, nil
+	return entries, nil
+}
+
+// LookupEntry is the result of a dictionary lookup.
+type LookupEntry struct {
+	Key          string
+	Type         string
+	Heading      string
+	GlossSummary string
+	ID           int
 }
 
 // DictEntry is a single entry in the JMdict dictionary.
@@ -88,6 +90,35 @@ type DictEntry struct {
 	KanjiReadings []KanjiReading `xml:"k_ele"`
 	KanaReadings  []KanaReading  `xml:"r_ele"`
 	Senses        []Sense        `xml:"sense"`
+}
+
+// Heading returns the primary heading of the entry for presentation purposes.
+// This is either the first kanji reading or, if there are no kanji readings,
+// the first kana reading.
+func (e DictEntry) Heading() string {
+	if len(e.KanjiReadings) > 0 {
+		return e.KanjiReadings[0].Reading
+	}
+	return e.KanaReadings[0].Reading
+}
+
+// GlossSummary returns a summary of the glosses of the entry.
+func (e DictEntry) GlossSummary() string {
+	// For conciseness, we take only the first five glosses
+	var glosses []string
+outer:
+	for _, sense := range e.Senses {
+		for _, gloss := range sense.Glosses {
+			if len(glosses) >= 5 {
+				break outer
+			}
+			if gloss.Language != "" {
+				continue
+			}
+			glosses = append(glosses, gloss.Gloss)
+		}
+	}
+	return strings.Join(glosses, "; ")
 }
 
 // KanjiReading is a reading for an entry using kanji or other non-kana
@@ -129,7 +160,7 @@ type Sense struct {
 // LoanSource is a description of the source of a loan word.
 type LoanSource struct {
 	Source             string             `xml:",chardata"`
-	Language           Language           `xml:"xml:lang,attr"`
+	Language           Language           `xml:"lang,attr"`
 	PartialDescription PartialDescription `xml:"ls_type,attr"`
 	Wasei              Wasei              `xml:"ls_wasei,attr"`
 }
@@ -147,7 +178,8 @@ type Wasei bool
 
 // Gloss is a gloss of a word or phrase in another language.
 type Gloss struct {
-	Gloss  string `xml:",chardata"`
-	Gender string `xml:"g_gend,attr"`
-	Type   string `xml:"g_type,attr"`
+	Gloss    string   `xml:",chardata"`
+	Language Language `xml:"lang,attr"`
+	Gender   string   `xml:"g_gend,attr"`
+	Type     string   `xml:"g_type,attr"`
 }

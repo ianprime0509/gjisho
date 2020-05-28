@@ -24,8 +24,9 @@ var appComponents = map[string]interface{}{
 }
 
 var signals = map[string]interface{}{
-	"hideWidget":  hideable.Hide,
-	"inhibitNext": func() bool { return true },
+	"hideWidget":    hideable.Hide,
+	"inhibitNext":   func() bool { return true },
+	"searchChanged": searchChanged,
 	"toggleSearch": func() {
 		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
 	},
@@ -77,4 +78,8 @@ func getAppComponents(builder *gtk.Builder) {
 		}
 		reflect.ValueOf(ptr).Elem().Set(reflect.ValueOf(comp))
 	}
+}
+
+func searchChanged(entry *gtk.SearchEntry) {
+
 }
