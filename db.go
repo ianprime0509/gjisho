@@ -54,6 +54,10 @@ func (dict *JMdict) Fetch(id int) (DictEntry, error) {
 
 // Lookup looks up dictionary entries according to the given query.
 func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
+	if query == "" {
+		return nil, nil
+	}
+
 	rows, err := dict.lookupQuery.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %v", err)
@@ -69,7 +73,7 @@ func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
 		entries = append(entries, entry)
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
 	return entries, nil

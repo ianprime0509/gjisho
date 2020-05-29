@@ -17,10 +17,12 @@ type hideable interface {
 
 var aboutDialog *gtk.AboutDialog
 var searchRevealer *gtk.Revealer
+var searchResults *gtk.ListBox
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":    &aboutDialog,
 	"searchRevealer": &searchRevealer,
+	"searchResults":  &searchResults,
 }
 
 var signals = map[string]interface{}{
@@ -32,10 +34,18 @@ var signals = map[string]interface{}{
 	},
 }
 
+var dict *JMdict
+
 // LaunchGUI launches the application user interface, passing the given
 // arguments to GTK. It does not return an error; if any errors occur here, the
 // program will terminate.
 func LaunchGUI(args []string) {
+	var err error
+	dict, err = OpenJMdict("jmdict.sqlite")
+	if err != nil {
+		log.Fatalf("could not open JMdict database: %v", err)
+	}
+
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		log.Fatalf("could not create application: %v", err)
@@ -81,5 +91,35 @@ func getAppComponents(builder *gtk.Builder) {
 }
 
 func searchChanged(entry *gtk.SearchEntry) {
+	if query, err := entry.GetText(); err == nil {
+		go func() {
+			entries, err := dict.Lookup(query)
+			if err == nil {
+				glib.IdleAdd(func() { showLookupEntries(entries) })
+			} else {
+				log.Printf("Lookup query error: %v", err)
+			}
+		}()
+	} else {
+		log.Printf("Error getting search text: %v", err)
+	}
+}
 
+func showLookupEntries(entries []LookupEntry) {
+	searchResults.GetChildren().Foreach(func(item interface{}) {
+		searchResults.Remove(item.(gtk.IWidget))
+	})
+
+	for i, entry := range entries {
+		if i > 50 {
+			break
+		}
+
+		if label, err := gtk.LabelNew(entry.Heading); err == nil {
+			searchResults.Add(label)
+		} else {
+			log.Printf("Error creating label: %v", err)
+		}
+	}
+	searchResults.ShowAll()
 }
