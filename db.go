@@ -21,7 +21,7 @@ func OpenJMdict(path string) (*JMdict, error) {
 		return nil, fmt.Errorf("could not open JMdict database: %v", err)
 	}
 
-	lookupQuery, err := db.Prepare("SELECT key, type, heading, gloss_summary, id FROM Lookup WHERE key MATCH ?")
+	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, id FROM Lookup WHERE Lookup MATCH ?")
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -67,7 +67,7 @@ func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
 	var entries []LookupEntry
 	for rows.Next() {
 		var entry LookupEntry
-		if err := rows.Scan(&entry.Key, &entry.Type, &entry.Heading, &entry.GlossSummary, &entry.ID); err != nil {
+		if err := rows.Scan(&entry.Heading, &entry.PrimaryReading, &entry.GlossSummary, &entry.ID); err != nil {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
 		entries = append(entries, entry)
@@ -81,11 +81,10 @@ func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
 
 // LookupEntry is the result of a dictionary lookup.
 type LookupEntry struct {
-	Key          string
-	Type         string
-	Heading      string
-	GlossSummary string
-	ID           int
+	Heading        string
+	PrimaryReading string
+	GlossSummary   string
+	ID             int
 }
 
 // DictEntry is a single entry in the JMdict dictionary.
@@ -103,6 +102,12 @@ func (e DictEntry) Heading() string {
 	if len(e.KanjiReadings) > 0 {
 		return e.KanjiReadings[0].Reading
 	}
+	return e.KanaReadings[0].Reading
+}
+
+// PrimaryReading returns the primary reading of the entry (the first kana
+// reading).
+func (e DictEntry) PrimaryReading() string {
 	return e.KanaReadings[0].Reading
 }
 

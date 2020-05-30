@@ -7,6 +7,7 @@ import (
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 )
 
 const appID = "com.github.ianprime0509.gjisho"
@@ -73,6 +74,15 @@ func onActivate(app *gtk.Application) {
 	window := windowObj.(*gtk.ApplicationWindow)
 	app.AddWindow(window)
 
+	css, err := gtk.CssProviderNew()
+	if err != nil {
+		log.Fatalf("could not create CSS provider: %v", err)
+	}
+	if err := css.LoadFromPath("gui.css"); err != nil {
+		log.Fatalf("could not load CSS: %v", err)
+	}
+	gtk.AddProviderForScreen(window.GetScreen(), css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
 	aboutAction := glib.SimpleActionNew("about", nil)
 	aboutAction.Connect("activate", func() { aboutDialog.Present() })
 	app.AddAction(aboutAction)
@@ -91,18 +101,15 @@ func getAppComponents(builder *gtk.Builder) {
 }
 
 func searchChanged(entry *gtk.SearchEntry) {
-	if query, err := entry.GetText(); err == nil {
-		go func() {
-			entries, err := dict.Lookup(query)
-			if err == nil {
-				glib.IdleAdd(func() { showLookupEntries(entries) })
-			} else {
-				log.Printf("Lookup query error: %v", err)
-			}
-		}()
-	} else {
-		log.Printf("Error getting search text: %v", err)
-	}
+	query, _ := entry.GetText()
+	go func() {
+		entries, err := dict.Lookup(query)
+		if err == nil {
+			glib.IdleAdd(func() { showLookupEntries(entries) })
+		} else {
+			log.Printf("Lookup query error: %v", err)
+		}
+	}()
 }
 
 func showLookupEntries(entries []LookupEntry) {
@@ -114,12 +121,32 @@ func showLookupEntries(entries []LookupEntry) {
 		if i > 50 {
 			break
 		}
-
-		if label, err := gtk.LabelNew(entry.Heading); err == nil {
-			searchResults.Add(label)
-		} else {
-			log.Printf("Error creating label: %v", err)
-		}
+		searchResults.Add(newSearchResult(&entry))
 	}
 	searchResults.ShowAll()
+}
+
+func newSearchResult(entry *LookupEntry) gtk.IWidget {
+	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	ctx, _ := box.GetStyleContext()
+	ctx.AddClass("search-result")
+
+	box.Add(newSimpleLabel(entry.Heading, "search-result-heading"))
+	if entry.Heading != entry.PrimaryReading {
+		box.Add(newSimpleLabel(entry.PrimaryReading, "search-result-reading"))
+	}
+	box.Add(newSimpleLabel(entry.GlossSummary, "search-result-gloss"))
+
+	return box
+}
+
+func newSimpleLabel(text string, classes ...string) *gtk.Label {
+	label, _ := gtk.LabelNew(text)
+	label.SetXAlign(0)
+	label.SetEllipsize(pango.ELLIPSIZE_END)
+	ctx, _ := label.GetStyleContext()
+	for _, class := range classes {
+		ctx.AddClass(class)
+	}
+	return label
 }

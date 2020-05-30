@@ -65,7 +65,7 @@ func ConvertJMdict(xmlPath string, dbPath string) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Entry insert statement: %v", err)
 	}
-	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?, ?)")
+	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare Lookup insert statement: %v", err)
 	}
@@ -145,11 +145,10 @@ func createJMdictTables(db *sql.DB) error {
 	}
 
 	_, err = db.Exec(`CREATE VIRTUAL TABLE Lookup USING FTS5 (
-		key,
-		type          UNINDEXED,
-		heading       UNINDEXED,
-		gloss_summary UNINDEXED,
-		id            UNINDEXED
+		heading,
+		primary_reading,
+		gloss_summary,
+		id UNINDEXED
 	)`)
 	if err != nil {
 		return fmt.Errorf("could not create JMdict lookup table: %v", err)
@@ -173,30 +172,9 @@ func convertDictEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry
 		return fmt.Errorf("could not insert Entry data: %v", err)
 	}
 
-	heading := entry.Heading()
-	glossSummary := entry.GlossSummary()
-	for _, kanji := range entry.KanjiReadings {
-		_, err = insertLookup.Exec(kanji.Reading, "kanji", heading, glossSummary, entry.ID)
-		if err != nil {
-			return fmt.Errorf("could not insert Lookup data for kanji: %v", err)
-		}
-	}
-	for _, kana := range entry.KanaReadings {
-		_, err = insertLookup.Exec(kana.Reading, "kana", heading, glossSummary, entry.ID)
-		if err != nil {
-			return fmt.Errorf("could not insert Lookup data for kana: %v", err)
-		}
-	}
-	for _, sense := range entry.Senses {
-		for _, gloss := range sense.Glosses {
-			if gloss.Language != "" {
-				continue
-			}
-			_, err := insertLookup.Exec(gloss.Gloss, "gloss", heading, glossSummary, entry.ID)
-			if err != nil {
-				return fmt.Errorf("could not insert Lookup data for gloss: %v", err)
-			}
-		}
+	_, err = insertLookup.Exec(entry.Heading(), entry.PrimaryReading(), entry.GlossSummary(), entry.ID)
+	if err != nil {
+		return fmt.Errorf("could not insert Lookup data: %v", err)
 	}
 
 	return nil
