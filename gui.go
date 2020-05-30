@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
@@ -17,21 +18,37 @@ type hideable interface {
 }
 
 var aboutDialog *gtk.AboutDialog
+var searchEntry *gtk.SearchEntry
 var searchRevealer *gtk.Revealer
 var searchResults *gtk.ListBox
+var searchToggleButton *gtk.ToggleButton
 
 var appComponents = map[string]interface{}{
-	"aboutDialog":    &aboutDialog,
-	"searchRevealer": &searchRevealer,
-	"searchResults":  &searchResults,
+	"aboutDialog":        &aboutDialog,
+	"searchEntry":        &searchEntry,
+	"searchRevealer":     &searchRevealer,
+	"searchResults":      &searchResults,
+	"searchToggleButton": &searchToggleButton,
 }
 
 var signals = map[string]interface{}{
 	"hideWidget":    hideable.Hide,
 	"inhibitNext":   func() bool { return true },
 	"searchChanged": searchChanged,
+	"searchEntryKeyPress": func(_ interface{}, ev *gdk.Event) {
+		keyEv := &gdk.EventKey{Event: ev}
+		if keyEv.KeyVal() == gdk.KEY_Escape {
+			stopSearch()
+		}
+	},
 	"toggleSearch": func() {
 		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
+	},
+	"windowKeyPress": func(_ interface{}, ev *gdk.Event) {
+		keyEv := &gdk.EventKey{Event: ev}
+		if keyEv.KeyVal() == gdk.KEY_f && keyEv.State()&gdk.GDK_CONTROL_MASK != 0 {
+			startSearch()
+		}
 	},
 }
 
@@ -149,4 +166,15 @@ func newSimpleLabel(text string, classes ...string) *gtk.Label {
 		ctx.AddClass(class)
 	}
 	return label
+}
+
+func startSearch() {
+	searchToggleButton.SetActive(true)
+	searchRevealer.SetRevealChild(true)
+	searchEntry.GrabFocus()
+}
+
+func stopSearch() {
+	searchToggleButton.SetActive(false)
+	searchRevealer.SetRevealChild(false)
 }
