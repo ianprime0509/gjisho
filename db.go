@@ -53,7 +53,7 @@ func (dict *JMdict) Fetch(id int) (DictEntry, error) {
 }
 
 // Lookup looks up dictionary entries according to the given query.
-func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
+func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 	if query == "" {
 		return nil, nil
 	}
@@ -64,23 +64,23 @@ func (dict *JMdict) Lookup(query string) ([]LookupEntry, error) {
 	}
 	defer rows.Close()
 
-	var entries []LookupEntry
+	var results []LookupResult
 	for rows.Next() {
-		var entry LookupEntry
-		if err := rows.Scan(&entry.Heading, &entry.PrimaryReading, &entry.GlossSummary, &entry.ID); err != nil {
+		var result LookupResult
+		if err := rows.Scan(&result.Heading, &result.PrimaryReading, &result.GlossSummary, &result.ID); err != nil {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
-		entries = append(entries, entry)
+		results = append(results, result)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
-	return entries, nil
+	return results, nil
 }
 
-// LookupEntry is the result of a dictionary lookup.
-type LookupEntry struct {
+// LookupResult is the result of a dictionary lookup.
+type LookupResult struct {
 	Heading        string
 	PrimaryReading string
 	GlossSummary   string

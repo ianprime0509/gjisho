@@ -20,14 +20,15 @@ type hideable interface {
 var aboutDialog *gtk.AboutDialog
 var searchEntry *gtk.SearchEntry
 var searchRevealer *gtk.Revealer
-var searchResults *gtk.ListBox
 var searchToggleButton *gtk.ToggleButton
+
+var searchResults = new(SearchResultList)
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":        &aboutDialog,
 	"searchEntry":        &searchEntry,
 	"searchRevealer":     &searchRevealer,
-	"searchResults":      &searchResults,
+	"searchResults":      &searchResults.listBox,
 	"searchToggleButton": &searchToggleButton,
 }
 
@@ -41,6 +42,8 @@ var signals = map[string]interface{}{
 			stopSearch()
 		}
 	},
+	"searchResultsEndReached":  func() { searchResults.ShowMore() },
+	"searchResultsRowSelected": func() { log.Print(searchResults.Selected()) },
 	"toggleSearch": func() {
 		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
 	},
@@ -117,33 +120,43 @@ func getAppComponents(builder *gtk.Builder) {
 	}
 }
 
-func searchChanged(entry *gtk.SearchEntry) {
-	query, _ := entry.GetText()
-	go func() {
-		entries, err := dict.Lookup(query)
-		if err == nil {
-			glib.IdleAdd(func() { showLookupEntries(entries) })
-		} else {
-			log.Printf("Lookup query error: %v", err)
-		}
-	}()
+// SearchResultList is a list of search results displayed in the GUI.
+type SearchResultList struct {
+	listBox    *gtk.ListBox
+	results    []LookupResult
+	nDisplayed int
 }
 
-func showLookupEntries(entries []LookupEntry) {
-	searchResults.GetChildren().Foreach(func(item interface{}) {
-		searchResults.Remove(item.(gtk.IWidget))
-	})
-
-	for i, entry := range entries {
-		if i > 50 {
-			break
-		}
-		searchResults.Add(newSearchResult(&entry))
+// Selected returns the currently selected search result, or nil if none is
+// selected.
+func (lst *SearchResultList) Selected() *LookupResult {
+	if row := lst.listBox.GetSelectedRow(); row != nil {
+		return &lst.results[row.GetIndex()]
 	}
-	searchResults.ShowAll()
+	return nil
 }
 
-func newSearchResult(entry *LookupEntry) gtk.IWidget {
+// SetResults sets the currently displayed search results.
+func (lst *SearchResultList) SetResults(results []LookupResult) {
+	lst.results = results
+	lst.listBox.GetChildren().Foreach(func(e interface{}) {
+		lst.listBox.Remove(e.(gtk.IWidget))
+	})
+	lst.nDisplayed = 0
+	lst.ShowMore()
+}
+
+// ShowMore displays more search results in the list.
+func (lst *SearchResultList) ShowMore() {
+	maxIndex := lst.nDisplayed + 50
+	for ; lst.nDisplayed < len(lst.results) && lst.nDisplayed < maxIndex; lst.nDisplayed++ {
+		lst.listBox.Add(newSearchResult(lst.results[lst.nDisplayed]))
+	}
+	lst.listBox.ShowAll()
+}
+
+// newSearchResult creates a search result widget for display.
+func newSearchResult(entry LookupResult) gtk.IWidget {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	ctx, _ := box.GetStyleContext()
 	ctx.AddClass("search-result")
@@ -155,6 +168,18 @@ func newSearchResult(entry *LookupEntry) gtk.IWidget {
 	box.Add(newSimpleLabel(entry.GlossSummary, "search-result-gloss"))
 
 	return box
+}
+
+func searchChanged(entry *gtk.SearchEntry) {
+	query, _ := entry.GetText()
+	go func() {
+		results, err := dict.Lookup(query)
+		if err == nil {
+			glib.IdleAdd(func() { searchResults.SetResults(results) })
+		} else {
+			log.Printf("Lookup query error: %v", err)
+		}
+	}()
 }
 
 func newSimpleLabel(text string, classes ...string) *gtk.Label {
