@@ -113,14 +113,9 @@ func (e DictEntry) PrimaryReading() string {
 
 // GlossSummary returns a summary of the glosses of the entry.
 func (e DictEntry) GlossSummary() string {
-	// For conciseness, we take only the first five glosses
 	var glosses []string
-outer:
 	for _, sense := range e.Senses {
 		for _, gloss := range sense.Glosses {
-			if len(glosses) >= 5 {
-				break outer
-			}
 			if gloss.Language != "" {
 				continue
 			}
