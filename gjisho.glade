@@ -310,7 +310,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="label" translatable="yes">Kanji forms</property>
+                                        <property name="label" translatable="yes">Kanji writings</property>
                                         <attributes>
                                           <attribute name="weight" value="bold"/>
                                           <attribute name="scale" value="1.2"/>
@@ -323,7 +323,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkLabel" id="kanjiFormsLabel">
+                                      <object class="GtkLabel" id="kanjiWritingsLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="justify">center</property>
@@ -340,7 +340,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="margin_top">5</property>
-                                        <property name="label" translatable="yes">Kana forms</property>
+                                        <property name="label" translatable="yes">Kana writings</property>
                                         <attributes>
                                           <attribute name="weight" value="bold"/>
                                           <attribute name="scale" value="1.2"/>
@@ -353,7 +353,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkLabel" id="kanaFormsLabel">
+                                      <object class="GtkLabel" id="kanaWritingsLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="justify">center</property>
@@ -367,8 +367,8 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                     </child>
                                   </object>
                                   <packing>
-                                    <property name="name">forms</property>
-                                    <property name="title" translatable="yes">Forms</property>
+                                    <property name="name">writings</property>
+                                    <property name="title" translatable="yes">Writings</property>
                                   </packing>
                                 </child>
                                 <child>

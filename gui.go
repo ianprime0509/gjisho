@@ -31,8 +31,8 @@ var entryDisplay = new(EntryDisplay)
 var appComponents = map[string]interface{}{
 	"aboutDialog":        &aboutDialog,
 	"entryDetailsLabel":  &entryDisplay.detailsLabel,
-	"kanaFormsLabel":     &entryDisplay.kanaFormsLabel,
-	"kanjiFormsLabel":    &entryDisplay.kanjiFormsLabel,
+	"kanaWritingsLabel":  &entryDisplay.kanaWritingsLabel,
+	"kanjiWritingsLabel": &entryDisplay.kanjiWritingsLabel,
 	"moreInfoRevealer":   &moreInfoRevealer,
 	"primaryKanaLabel":   &entryDisplay.primaryKanaLabel,
 	"primaryKanjiLabel":  &entryDisplay.primaryKanjiLabel,
@@ -229,11 +229,11 @@ func stopSearch() {
 
 // EntryDisplay is the main display area for a dictionary entry.
 type EntryDisplay struct {
-	primaryKanaLabel  *gtk.Label
-	primaryKanjiLabel *gtk.Label
-	detailsLabel      *gtk.Label
-	kanjiFormsLabel   *gtk.Label
-	kanaFormsLabel    *gtk.Label
+	primaryKanaLabel   *gtk.Label
+	primaryKanjiLabel  *gtk.Label
+	detailsLabel       *gtk.Label
+	kanjiWritingsLabel *gtk.Label
+	kanaWritingsLabel  *gtk.Label
 }
 
 // Display displays the given dictionary entry in the display area.
@@ -247,11 +247,11 @@ func (disp *EntryDisplay) Display(entry DictEntry) {
 		disp.primaryKanaLabel.Hide()
 	}
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
-	disp.kanjiFormsLabel.SetMarkup(fmtKanjiForms(entry.KanjiReadings))
-	disp.kanaFormsLabel.SetMarkup(fmtKanaForms(entry.KanaReadings))
+	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiReadings))
+	disp.kanaWritingsLabel.SetMarkup(fmtKanaWritings(entry.KanaReadings))
 }
 
-func fmtKanjiForms(kanji []KanjiReading) string {
+func fmtKanjiWritings(kanji []KanjiReading) string {
 	if len(kanji) == 0 {
 		return "<i>None</i>"
 	}
@@ -269,7 +269,7 @@ func fmtKanjiForms(kanji []KanjiReading) string {
 	return strings.Join(forms, "\n")
 }
 
-func fmtKanaForms(kana []KanaReading) string {
+func fmtKanaWritings(kana []KanaReading) string {
 	var forms []string
 	for _, reading := range kana {
 		sb := new(strings.Builder)
