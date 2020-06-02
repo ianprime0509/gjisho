@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
+	"github.com/ianprime0509/gjisho/jmdict"
 )
 
 const appID = "com.github.ianprime0509.gjisho"
@@ -78,16 +80,20 @@ var signals = map[string]interface{}{
 	},
 }
 
-var dict *JMdict
+var dict *jmdict.JMdict
 
 // LaunchGUI launches the application user interface, passing the given
 // arguments to GTK. It does not return an error; if any errors occur here, the
 // program will terminate.
 func LaunchGUI(args []string) {
-	var err error
-	dict, err = OpenJMdict("jmdict.sqlite")
+	db, err := sql.Open("sqlite3", "gjisho.sqlite")
 	if err != nil {
-		log.Fatalf("Could not open JMdict database: %v", err)
+		log.Fatalf("Could not open database: %v", err)
+	}
+
+	dict, err = jmdict.New(db)
+	if err != nil {
+		log.Fatalf("Could not open JMdict handler: %v", err)
 	}
 
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
@@ -146,13 +152,13 @@ func getAppComponents(builder *gtk.Builder) {
 // SearchResultList is a list of search results displayed in the GUI.
 type SearchResultList struct {
 	listBox    *gtk.ListBox
-	results    []LookupResult
+	results    []jmdict.LookupResult
 	nDisplayed int
 }
 
 // Selected returns the currently selected search result, or nil if none is
 // selected.
-func (lst *SearchResultList) Selected() *LookupResult {
+func (lst *SearchResultList) Selected() *jmdict.LookupResult {
 	if row := lst.listBox.GetSelectedRow(); row != nil {
 		return &lst.results[row.GetIndex()]
 	}
@@ -160,7 +166,7 @@ func (lst *SearchResultList) Selected() *LookupResult {
 }
 
 // SetResults sets the currently displayed search results.
-func (lst *SearchResultList) SetResults(results []LookupResult) {
+func (lst *SearchResultList) SetResults(results []jmdict.LookupResult) {
 	lst.results = results
 	lst.listBox.GetChildren().Foreach(func(e interface{}) {
 		lst.listBox.Remove(e.(gtk.IWidget))
@@ -179,7 +185,7 @@ func (lst *SearchResultList) ShowMore() {
 }
 
 // newSearchResult creates a search result widget for display.
-func newSearchResult(entry LookupResult) gtk.IWidget {
+func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	ctx, _ := box.GetStyleContext()
 	ctx.AddClass("search-result")
@@ -237,7 +243,7 @@ type EntryDisplay struct {
 }
 
 // Display displays the given dictionary entry in the display area.
-func (disp *EntryDisplay) Display(entry DictEntry) {
+func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 	disp.primaryKanjiLabel.SetText(entry.Heading())
 	if entry.Heading() != entry.PrimaryReading() {
 		disp.primaryKanaLabel.SetText(entry.PrimaryReading())
@@ -251,7 +257,7 @@ func (disp *EntryDisplay) Display(entry DictEntry) {
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaWritings(entry.KanaReadings))
 }
 
-func fmtKanjiWritings(kanji []KanjiReading) string {
+func fmtKanjiWritings(kanji []jmdict.KanjiReading) string {
 	if len(kanji) == 0 {
 		return "<i>None</i>"
 	}
@@ -269,7 +275,7 @@ func fmtKanjiWritings(kanji []KanjiReading) string {
 	return strings.Join(forms, "\n")
 }
 
-func fmtKanaWritings(kana []KanaReading) string {
+func fmtKanaWritings(kana []jmdict.KanaReading) string {
 	var forms []string
 	for _, reading := range kana {
 		sb := new(strings.Builder)
@@ -291,7 +297,7 @@ func fmtKanaWritings(kana []KanaReading) string {
 	return strings.Join(forms, "\n")
 }
 
-func fmtSenses(senses []Sense) string {
+func fmtSenses(senses []jmdict.Sense) string {
 	sb := new(strings.Builder)
 	glossIdx := 1
 	for _, sense := range senses {
