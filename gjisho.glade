@@ -185,6 +185,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                           <object class="GtkLabel" id="primaryKanaLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="selectable">True</property>
                             <attributes>
                               <attribute name="scale" value="1.2"/>
                             </attributes>
@@ -202,6 +203,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                           <object class="GtkLabel" id="primaryKanjiLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="selectable">True</property>
                             <attributes>
                               <attribute name="scale" value="1.728"/>
                             </attributes>
@@ -224,6 +226,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                             <property name="margin_top">10</property>
                             <property name="margin_bottom">5</property>
                             <property name="wrap">True</property>
+                            <property name="selectable">True</property>
                             <property name="xalign">0</property>
                             <style>
                               <class name="entry-details"/>
@@ -328,6 +331,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="can_focus">False</property>
                                         <property name="justify">center</property>
                                         <property name="wrap">True</property>
+                                        <property name="selectable">True</property>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
@@ -358,6 +362,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="can_focus">False</property>
                                         <property name="justify">center</property>
                                         <property name="wrap">True</property>
+                                        <property name="selectable">True</property>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
