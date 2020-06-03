@@ -46,7 +46,7 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %v", err)
 	}
-	insert, err := db.Prepare("INSERT INTO Kanji VALUES (?, ?)")
+	insert, err := tx.Prepare("INSERT INTO Kanji VALUES (?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare Kanji insert statement: %v", err)
 	}
