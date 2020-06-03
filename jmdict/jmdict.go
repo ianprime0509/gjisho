@@ -38,7 +38,7 @@ func New(db *sql.DB) (*JMdict, error) {
 
 // ConvertInto converts the JMdict data from XML into the given database.
 func ConvertInto(xmlPath string, db *sql.DB) error {
-	log.Println("Converting JMdict to database")
+	log.Print("Converting JMdict to database")
 	entities, err := xmlutil.ParseEntities(xmlPath)
 	if err != nil {
 		return fmt.Errorf("could not parse XML entities: %v", err)
@@ -61,12 +61,10 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Entry insert statement: %v", err)
 	}
-	defer insertEntry.Close()
 	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare Lookup insert statement: %v", err)
 	}
-	defer insertLookup.Close()
 
 	done := 0
 	decoder := xml.NewDecoder(bufio.NewReader(jmdict))
