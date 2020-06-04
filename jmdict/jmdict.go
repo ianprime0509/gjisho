@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/ianprime0509/gjisho/xmlutil"
 )
@@ -154,6 +155,7 @@ func (dict *JMdict) Fetch(id int) (Entry, error) {
 	if err := json.Unmarshal(data, &entry); err != nil {
 		return Entry{}, fmt.Errorf("could not unmarshal data: %v", err)
 	}
+
 	return entry, nil
 }
 
@@ -228,6 +230,31 @@ func (e Entry) GlossSummary() string {
 		}
 	}
 	return strings.Join(glosses, "; ")
+}
+
+// AssociatedKanji returns all the kanji associated with the entry (e.g. because
+// they are part of the entry's reading).
+func (e Entry) AssociatedKanji() []string {
+	// We want the set to be in order, so the value of the map is the index of the
+	// element
+	set := make(map[rune]int)
+	idx := 0
+	for _, r := range e.KanjiReadings {
+		for _, c := range r.Reading {
+			if unicode.Is(unicode.Han, c) {
+				if _, ok := set[c]; !ok {
+					set[c] = idx
+					idx++
+				}
+			}
+		}
+	}
+
+	kanji := make([]string, len(set))
+	for c, idx := range set {
+		kanji[idx] = string(c)
+	}
+	return kanji
 }
 
 // KanjiReading is a reading for an entry using kanji or other non-kana

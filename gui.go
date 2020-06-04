@@ -13,6 +13,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
 	"github.com/ianprime0509/gjisho/jmdict"
+	"github.com/ianprime0509/gjisho/kanjidic"
 )
 
 const appID = "com.github.ianprime0509.gjisho"
@@ -29,24 +30,29 @@ var searchToggleButton *gtk.ToggleButton
 
 var searchResults = new(SearchResultList)
 var entryDisplay = new(EntryDisplay)
+var kanjiList = new(KanjiList)
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":        &aboutDialog,
 	"entryDetailsLabel":  &entryDisplay.detailsLabel,
 	"kanaWritingsLabel":  &entryDisplay.kanaWritingsLabel,
+	"kanjiList":          &kanjiList.list,
 	"kanjiWritingsLabel": &entryDisplay.kanjiWritingsLabel,
 	"moreInfoRevealer":   &moreInfoRevealer,
 	"primaryKanaLabel":   &entryDisplay.primaryKanaLabel,
 	"primaryKanjiLabel":  &entryDisplay.primaryKanjiLabel,
 	"searchEntry":        &searchEntry,
 	"searchRevealer":     &searchRevealer,
-	"searchResults":      &searchResults.listBox,
+	"searchResults":      &searchResults.list,
 	"searchToggleButton": &searchToggleButton,
 }
 
 var signals = map[string]interface{}{
 	"hideWidget":  hideable.Hide,
 	"inhibitNext": func() bool { return true },
+	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
+		log.Printf("Kanji row activated: %v", kanjiList.kanji[row.GetIndex()])
+	},
 	"moreInfoToggle": func() {
 		moreInfoRevealer.SetRevealChild(!moreInfoRevealer.GetRevealChild())
 	},
@@ -65,6 +71,7 @@ var signals = map[string]interface{}{
 		}
 		if entry, err := dict.Fetch(sel.ID); err == nil {
 			entryDisplay.Display(entry)
+			kanjiList.Display(entry.AssociatedKanji())
 		} else {
 			log.Printf("Could not fetch entry with ID %v: %v", searchResults.Selected().ID, err)
 		}
@@ -81,6 +88,7 @@ var signals = map[string]interface{}{
 }
 
 var dict *jmdict.JMdict
+var kanjiDict *kanjidic.Kanjidic
 
 // LaunchGUI launches the application user interface, passing the given
 // arguments to GTK. It does not return an error; if any errors occur here, the
@@ -94,6 +102,11 @@ func LaunchGUI(args []string) {
 	dict, err = jmdict.New(db)
 	if err != nil {
 		log.Fatalf("Could not open JMdict handler: %v", err)
+	}
+
+	kanjiDict, err = kanjidic.New(db)
+	if err != nil {
+		log.Fatalf("Could not open Kanjidic handler: %v", err)
 	}
 
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
@@ -151,7 +164,7 @@ func getAppComponents(builder *gtk.Builder) {
 
 // SearchResultList is a list of search results displayed in the GUI.
 type SearchResultList struct {
-	listBox    *gtk.ListBox
+	list       *gtk.ListBox
 	results    []jmdict.LookupResult
 	nDisplayed int
 }
@@ -159,7 +172,7 @@ type SearchResultList struct {
 // Selected returns the currently selected search result, or nil if none is
 // selected.
 func (lst *SearchResultList) Selected() *jmdict.LookupResult {
-	if row := lst.listBox.GetSelectedRow(); row != nil {
+	if row := lst.list.GetSelectedRow(); row != nil {
 		return &lst.results[row.GetIndex()]
 	}
 	return nil
@@ -168,8 +181,8 @@ func (lst *SearchResultList) Selected() *jmdict.LookupResult {
 // SetResults sets the currently displayed search results.
 func (lst *SearchResultList) SetResults(results []jmdict.LookupResult) {
 	lst.results = results
-	lst.listBox.GetChildren().Foreach(func(e interface{}) {
-		lst.listBox.Remove(e.(gtk.IWidget))
+	lst.list.GetChildren().Foreach(func(e interface{}) {
+		lst.list.Remove(e.(gtk.IWidget))
 	})
 	lst.nDisplayed = 0
 	lst.ShowMore()
@@ -179,9 +192,9 @@ func (lst *SearchResultList) SetResults(results []jmdict.LookupResult) {
 func (lst *SearchResultList) ShowMore() {
 	maxIndex := lst.nDisplayed + 50
 	for ; lst.nDisplayed < len(lst.results) && lst.nDisplayed < maxIndex; lst.nDisplayed++ {
-		lst.listBox.Add(newSearchResult(lst.results[lst.nDisplayed]))
+		lst.list.Add(newSearchResult(lst.results[lst.nDisplayed]))
 	}
-	lst.listBox.ShowAll()
+	lst.list.ShowAll()
 }
 
 // newSearchResult creates a search result widget for display.
@@ -348,6 +361,9 @@ func fmtSenses(senses []jmdict.Sense) string {
 			fmt.Fprintf(sb, "<i>Antonyms: %v</i>\n", strings.Join(ants, ", "))
 		}
 
+		// We only want to print an extra newline if there were glosses formatted
+		// for this sense, so we keep track of that
+		foundGloss := false
 		for _, gloss := range sense.Glosses {
 			// Only consider English glosses for now
 			if gloss.Language != "" {
@@ -356,12 +372,66 @@ func fmtSenses(senses []jmdict.Sense) string {
 
 			fmt.Fprintf(sb, "%v. %v\n", glossIdx, gloss.Gloss)
 			glossIdx++
+			foundGloss = true
 		}
-		sb.WriteRune('\n')
+		if foundGloss {
+			sb.WriteRune('\n')
+		}
 	}
 	return sb.String()
 }
 
 func fmtEntryRef(entry string) string {
 	return fmt.Sprintf("<a href=\"entry://%s\">%[1]s</a>", entry)
+}
+
+// KanjiList is an overview list of kanji associated with an entry.
+type KanjiList struct {
+	list  *gtk.ListBox
+	kanji []kanjidic.Character
+}
+
+// Display displays information about the given kanji in the list.
+func (lst *KanjiList) Display(kanji []string) {
+	lst.list.GetChildren().Foreach(func(e interface{}) { lst.list.Remove(e.(gtk.IWidget)) })
+	lst.kanji = nil
+
+	for _, c := range kanji {
+		if result, err := kanjiDict.Fetch(c); err == nil {
+			lst.list.Add(newKanjiListRow(result))
+			lst.kanji = append(lst.kanji, result)
+		} else {
+			log.Printf("Error fetching kanji information for %q: %v", c, err)
+		}
+	}
+
+	lst.list.ShowAll()
+}
+
+func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
+	row, _ := gtk.ListBoxRowNew()
+	rowBox, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
+
+	header, _ := gtk.LabelNew(c.Literal)
+	ctx, _ := header.GetStyleContext()
+	ctx.AddClass("kanji-header")
+	rowBox.PackStart(header, false, false, 0)
+
+	details, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	on, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.On), ", "))
+	on.SetLineWrap(true)
+	on.SetJustify(gtk.JUSTIFY_CENTER)
+	details.Add(on)
+	kun, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.Kun), ", "))
+	kun.SetLineWrap(true)
+	kun.SetJustify(gtk.JUSTIFY_CENTER)
+	details.Add(kun)
+	meanings, _ := gtk.LabelNew(strings.Join(c.Meanings(), ", "))
+	meanings.SetLineWrap(true)
+	meanings.SetJustify(gtk.JUSTIFY_CENTER)
+	details.Add(meanings)
+	rowBox.PackStart(details, true, true, 0)
+
+	row.Add(rowBox)
+	return row
 }

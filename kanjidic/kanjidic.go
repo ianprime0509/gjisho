@@ -17,12 +17,17 @@ import (
 
 // Kanjidic is the Kanjidic2 database, containing data on kanji.
 type Kanjidic struct {
-	db *sql.DB
+	db         *sql.DB
+	fetchQuery *sql.Stmt
 }
 
 // New returns a new Kanjidic using the given database.
 func New(db *sql.DB) (*Kanjidic, error) {
-	return &Kanjidic{db}, nil
+	fetchQuery, err := db.Prepare("SELECT data FROM Kanji WHERE character = ?")
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare Kanjidic fetch query: %v", err)
+	}
+	return &Kanjidic{db, fetchQuery}, nil
 }
 
 // ConvertInto converts the Kanjidic2 data from XML into the given database.
@@ -112,6 +117,21 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insert *sql.Stm
 	return nil
 }
 
+// Fetch returns the character data for the given kanji.
+func (dict *Kanjidic) Fetch(kanji string) (Character, error) {
+	var data []byte
+	if err := dict.fetchQuery.QueryRow(kanji).Scan(&data); err != nil {
+		return Character{}, fmt.Errorf("scan error: %v", err)
+	}
+
+	var char Character
+	if err := json.Unmarshal(data, &char); err != nil {
+		return Character{}, fmt.Errorf("could not unmarshal data: %v", err)
+	}
+
+	return char, nil
+}
+
 // Character is a single kanji character.
 type Character struct {
 	Literal              string                `xml:"literal"`
@@ -122,6 +142,32 @@ type Character struct {
 	QueryCodes           []QueryCode           `xml:"query_code>q_code"`
 	ReadingMeaningGroups []ReadingMeaningGroup `xml:"reading_meaning>rmgroup"`
 	Nanori               []string              `xml:"reading_meaning>nanori"`
+}
+
+// Readings returns all the character's readings of the given type.
+func (c Character) Readings(ty ReadingType) []string {
+	var rs []string
+	for _, group := range c.ReadingMeaningGroups {
+		for _, r := range group.Readings {
+			if r.Type == ty {
+				rs = append(rs, r.Reading)
+			}
+		}
+	}
+	return rs
+}
+
+// Meanings returns all the character's English meanings.
+func (c Character) Meanings() []string {
+	var ms []string
+	for _, group := range c.ReadingMeaningGroups {
+		for _, m := range group.Meanings {
+			if m.Language == "" {
+				ms = append(ms, m.Meaning)
+			}
+		}
+	}
+	return ms
 }
 
 // Codepoint is a description of a character's codepoint in some standard.
@@ -206,11 +252,29 @@ type ReadingMeaningGroup struct {
 
 // Reading is a reading of a character.
 type Reading struct {
-	Reading string `xml:",chardata"`
-	Type    string `xml:"r_type,attr"`
-	OnType  string `xml:"on_type,attr"`
-	Jouyou  Jouyou `xml:"r_status,attr"`
+	Reading string      `xml:",chardata"`
+	Type    ReadingType `xml:"r_type,attr"`
+	OnType  string      `xml:"on_type,attr"`
+	Jouyou  Jouyou      `xml:"r_status,attr"`
 }
+
+// ReadingType is the type of a reading.
+type ReadingType string
+
+const (
+	// Pinyin is a Chinese reading in Pinyin.
+	Pinyin ReadingType = "pinyin"
+	// KoreanRomanized is a romanized Korean reading.
+	KoreanRomanized = "korean_r"
+	// KoreanHangul is a Korean reading in Hangul.
+	KoreanHangul = "korean_h"
+	// Vietnamese is a Vietnamese reading.
+	Vietnamese = "vietnam"
+	// On is a Japanese on reading.
+	On = "ja_on"
+	// Kun is a Japanese kun reading.
+	Kun = "ja_kun"
+)
 
 // Jouyou is a boolean value indicating whether a reading is approved for a
 // Jouyou kanji.
