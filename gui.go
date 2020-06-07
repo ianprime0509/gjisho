@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -212,12 +213,28 @@ func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
 	return box
 }
 
+// Consider the situation where a search query comes in that takes a long time,
+// followed by one that takes less time. To avoid having the results of the
+// first query come in later and overwrite the results of the second, we use a
+// counter to identify the queries in sequence and prevent overwriting newer
+// query results with older ones.
+var queryCounter uint32
+var currentQuery uint32
+
 func searchChanged(entry *gtk.SearchEntry) {
 	query, _ := entry.GetText()
 	go func() {
+		queryNum := atomic.AddUint32(&queryCounter, 1)
 		results, err := dict.Lookup(query)
 		if err == nil {
-			glib.IdleAdd(func() { searchResults.SetResults(results) })
+			glib.IdleAdd(func() {
+				// There is no race condition here since this function will only be
+				// executed on the main thread
+				if queryNum > currentQuery {
+					searchResults.SetResults(results)
+					currentQuery = queryNum
+				}
+			})
 		} else {
 			log.Printf("Lookup query error: %v", err)
 		}
