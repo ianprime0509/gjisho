@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -25,7 +26,7 @@ type JMdict struct {
 
 // New returns a new JMdict using the given database.
 func New(db *sql.DB) (*JMdict, error) {
-	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, id FROM Lookup WHERE Lookup MATCH ?")
+	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, all_readings, priority, id FROM Lookup WHERE Lookup MATCH ?")
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -62,7 +63,7 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Entry insert statement: %v", err)
 	}
-	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?)")
+	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare Lookup insert statement: %v", err)
 	}
@@ -112,7 +113,10 @@ func createTables(db *sql.DB) error {
 		heading,
 		primary_reading,
 		gloss_summary,
-		id UNINDEXED
+		all_readings,
+		priority UNINDEXED,
+		id UNINDEXED,
+		prefix = '1 2 3 4 5'
 	)`)
 	if err != nil {
 		return fmt.Errorf("could not create JMdict lookup table: %v", err)
@@ -136,7 +140,8 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry *sq
 		return fmt.Errorf("could not insert Entry data: %v", err)
 	}
 
-	_, err = insertLookup.Exec(entry.Heading(), entry.PrimaryReading(), entry.GlossSummary(), entry.ID)
+	_, err = insertLookup.Exec(entry.Heading(), entry.PrimaryReading(), entry.GlossSummary(),
+		entry.allReadings(), entry.Priority(), entry.ID)
 	if err != nil {
 		return fmt.Errorf("could not insert Lookup data: %v", err)
 	}
@@ -165,7 +170,7 @@ func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 		return nil, nil
 	}
 
-	rows, err := dict.lookupQuery.Query(query)
+	rows, err := dict.lookupQuery.Query(convertQuery(query))
 	if err != nil {
 		return nil, fmt.Errorf("query error: %v", err)
 	}
@@ -174,7 +179,8 @@ func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 	var results []LookupResult
 	for rows.Next() {
 		var result LookupResult
-		if err := rows.Scan(&result.Heading, &result.PrimaryReading, &result.GlossSummary, &result.ID); err != nil {
+		if err := rows.Scan(&result.Heading, &result.PrimaryReading, &result.GlossSummary,
+			&result.allReadings, &result.Priority, &result.ID); err != nil {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
 		results = append(results, result)
@@ -183,7 +189,25 @@ func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].relevance(query) > results[j].relevance(query)
+	})
 	return results, nil
+}
+
+// convertQuery converts the given query string into one usable by the SQLite
+// FTS5 engine.
+func convertQuery(query string) string {
+	sb := new(strings.Builder)
+	for _, token := range strings.Fields(query) {
+		if sb.Len() > 0 {
+			sb.WriteString(" OR ")
+		}
+		sb.WriteRune('"')
+		sb.WriteString(strings.ReplaceAll(token, `"`, `""`))
+		sb.WriteString(`"*`)
+	}
+	return sb.String()
 }
 
 // LookupResult is the result of a dictionary lookup.
@@ -191,7 +215,39 @@ type LookupResult struct {
 	Heading        string
 	PrimaryReading string
 	GlossSummary   string
+	allReadings    string
+	Priority       int
 	ID             int
+}
+
+// relevance returns a relative "relevance" score corresponding to the given
+// query.
+func (r LookupResult) relevance(query string) int {
+	tokens := strings.Fields(query)
+
+	readScore := 0
+	for _, reading := range strings.Fields(r.allReadings) {
+		for _, token := range tokens {
+			if reading == token {
+				readScore += 4
+			} else if strings.Contains(reading, token) {
+				readScore++
+			}
+		}
+	}
+
+	glossScore := 0
+	for _, gloss := range strings.Split(r.GlossSummary, "; ") {
+		for _, token := range tokens {
+			if gloss == token {
+				glossScore += 4
+			} else if strings.Contains(gloss, token) {
+				glossScore++
+			}
+		}
+	}
+
+	return 2*readScore + 2*glossScore + r.Priority
 }
 
 // Entry is a single entry in the JMdict dictionary.
@@ -255,6 +311,34 @@ func (e Entry) AssociatedKanji() []string {
 		kanji[idx] = string(c)
 	}
 	return kanji
+}
+
+// Priority returns a measure of the "priority" of the entry, where higher
+// numbers indicate a more common word (with 0 being the lowest).
+func (e Entry) Priority() int {
+	pri := 0
+	// The current implementation is rather stupid and doesn't take into account
+	// the differences between the various priority lists
+	for _, k := range e.KanjiReadings {
+		pri += len(k.Priority)
+	}
+	for _, k := range e.KanaReadings {
+		pri += len(k.Priority)
+	}
+	return pri
+}
+
+// allReadings returns a space-separated string containing all the readings of
+// the entry for lookup purposes.
+func (e Entry) allReadings() string {
+	readings := make([]string, 0, len(e.KanjiReadings)+len(e.KanaReadings))
+	for _, k := range e.KanjiReadings {
+		readings = append(readings, k.Reading)
+	}
+	for _, k := range e.KanaReadings {
+		readings = append(readings, k.Reading)
+	}
+	return strings.Join(readings, " ")
 }
 
 // KanjiReading is a reading for an entry using kanji or other non-kana
