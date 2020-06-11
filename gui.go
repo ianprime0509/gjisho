@@ -137,15 +137,6 @@ func onActivate(app *gtk.Application) {
 	window := windowObj.(*gtk.ApplicationWindow)
 	app.AddWindow(window)
 
-	css, err := gtk.CssProviderNew()
-	if err != nil {
-		log.Fatalf("Could not create CSS provider: %v", err)
-	}
-	if err := css.LoadFromPath("gui.css"); err != nil {
-		log.Fatalf("Could not load CSS: %v", err)
-	}
-	gtk.AddProviderForScreen(window.GetScreen(), css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
 	aboutAction := glib.SimpleActionNew("about", nil)
 	aboutAction.Connect("activate", func() { aboutDialog.Present() })
 	app.AddAction(aboutAction)
@@ -201,14 +192,23 @@ func (lst *SearchResultList) ShowMore() {
 // newSearchResult creates a search result widget for display.
 func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
-	ctx, _ := box.GetStyleContext()
-	ctx.AddClass("search-result")
 
-	box.Add(newSimpleLabel(entry.Heading, "search-result-heading"))
+	heading, _ := gtk.LabelNew(fmt.Sprintf(`<big>%s</big>`, entry.Heading))
+	heading.SetUseMarkup(true)
+	heading.SetXAlign(0)
+	heading.SetEllipsize(pango.ELLIPSIZE_END)
+	box.Add(heading)
 	if entry.Heading != entry.PrimaryReading {
-		box.Add(newSimpleLabel(entry.PrimaryReading, "search-result-reading"))
+		reading, _ := gtk.LabelNew(entry.PrimaryReading)
+		reading.SetXAlign(0)
+		reading.SetEllipsize(pango.ELLIPSIZE_END)
+		box.Add(reading)
 	}
-	box.Add(newSimpleLabel(entry.GlossSummary, "search-result-gloss"))
+	gloss, _ := gtk.LabelNew(fmt.Sprintf(`<small>%s</small>`, entry.GlossSummary))
+	gloss.SetUseMarkup(true)
+	gloss.SetXAlign(0)
+	gloss.SetEllipsize(pango.ELLIPSIZE_END)
+	box.Add(gloss)
 
 	return box
 }
@@ -239,17 +239,6 @@ func searchChanged(entry *gtk.SearchEntry) {
 			log.Printf("Lookup query error: %v", err)
 		}
 	}()
-}
-
-func newSimpleLabel(text string, classes ...string) *gtk.Label {
-	label, _ := gtk.LabelNew(text)
-	label.SetXAlign(0)
-	label.SetEllipsize(pango.ELLIPSIZE_END)
-	ctx, _ := label.GetStyleContext()
-	for _, class := range classes {
-		ctx.AddClass(class)
-	}
-	return label
 }
 
 func startSearch() {
@@ -429,10 +418,9 @@ func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
 	row, _ := gtk.ListBoxRowNew()
 	rowBox, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 
-	header, _ := gtk.LabelNew(c.Literal)
-	ctx, _ := header.GetStyleContext()
-	ctx.AddClass("kanji-header")
-	rowBox.PackStart(header, false, false, 0)
+	header, _ := gtk.LabelNew(fmt.Sprintf(`<span size="xx-large">%s</span>`, c.Literal))
+	header.SetUseMarkup(true)
+	rowBox.PackStart(header, false, false, 5)
 
 	details, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	on, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.On), ", "))
