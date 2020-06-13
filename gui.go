@@ -423,11 +423,11 @@ func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
 	rowBox.PackStart(header, false, false, 5)
 
 	details, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
-	on, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.On), ", "))
+	on, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.OnReading), ", "))
 	on.SetLineWrap(true)
 	on.SetJustify(gtk.JUSTIFY_CENTER)
 	details.Add(on)
-	kun, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.Kun), ", "))
+	kun, _ := gtk.LabelNew(strings.Join(c.Readings(kanjidic.KunReading), ", "))
 	kun.SetLineWrap(true)
 	kun.SetJustify(gtk.JUSTIFY_CENTER)
 	details.Add(kun)
