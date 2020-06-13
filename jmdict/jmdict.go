@@ -26,7 +26,7 @@ type JMdict struct {
 
 // New returns a new JMdict using the given database.
 func New(db *sql.DB) (*JMdict, error) {
-	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, all_readings, priority, id FROM Lookup WHERE Lookup MATCH ?")
+	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, all_writings, priority, id FROM Lookup WHERE Lookup MATCH ?")
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -113,7 +113,7 @@ func createTables(db *sql.DB) error {
 		heading,
 		primary_reading,
 		gloss_summary,
-		all_readings,
+		all_writings,
 		priority UNINDEXED,
 		id UNINDEXED,
 		prefix = '1 2 3 4 5'
@@ -141,7 +141,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry *sq
 	}
 
 	_, err = insertLookup.Exec(entry.Heading(), entry.PrimaryReading(), entry.GlossSummary(),
-		entry.allReadings(), entry.Priority(), entry.ID)
+		entry.allWritings(), entry.Priority(), entry.ID)
 	if err != nil {
 		return fmt.Errorf("could not insert Lookup data: %v", err)
 	}
@@ -164,13 +164,72 @@ func (dict *JMdict) Fetch(id int) (Entry, error) {
 	return entry, nil
 }
 
+// FetchByRef returns the dictionary entry that most closely matches the given
+// reference. The reference is expected to follow the standard format for cross
+// references, using ・ as a separator between parts.
+func (dict *JMdict) FetchByRef(ref string) (Entry, error) {
+	parts := strings.Split(ref, "・")
+	head := parts[0]
+	reading := ""
+	if len(parts) > 1 {
+		reading = parts[1]
+	}
+
+	results, err := dict.lookupRaw(fmt.Sprintf(`"%v"`, strings.ReplaceAll(parts[0], `"`, `""`)))
+	if err != nil {
+		return Entry{}, fmt.Errorf("could not search for writing %q: %v", ref, err)
+	}
+
+	match := LookupResult{}
+	score := 0
+	for _, r := range results {
+		newScore := 0
+		if r.Heading == head {
+			newScore++
+		}
+		ws := strings.Fields(r.allWritings)
+		for _, w := range ws {
+			if w == head {
+				newScore++
+			}
+			if w == reading {
+				newScore++
+			}
+		}
+
+		if newScore > score {
+			match = r
+			score = newScore
+		}
+	}
+	if match.ID == 0 {
+		return Entry{}, fmt.Errorf("no results for writing %q", ref)
+	}
+
+	return dict.Fetch(match.ID)
+}
+
 // Lookup looks up dictionary entries according to the given query.
 func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 	if query == "" {
 		return nil, nil
 	}
 
-	rows, err := dict.lookupQuery.Query(convertQuery(query))
+	results, err := dict.lookupRaw(convertQuery(query))
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].relevance(query) > results[j].relevance(query)
+	})
+
+	return results, nil
+}
+
+// lookupRaw is the same as Lookup, but uses a raw FTS5 query rather than a
+// converted one and does not sort the results in any particular order.
+func (dict *JMdict) lookupRaw(query string) ([]LookupResult, error) {
+	rows, err := dict.lookupQuery.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %v", err)
 	}
@@ -180,18 +239,15 @@ func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 	for rows.Next() {
 		var result LookupResult
 		if err := rows.Scan(&result.Heading, &result.PrimaryReading, &result.GlossSummary,
-			&result.allReadings, &result.Priority, &result.ID); err != nil {
+			&result.allWritings, &result.Priority, &result.ID); err != nil {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
 		results = append(results, result)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].relevance(query) > results[j].relevance(query)
-	})
+
 	return results, nil
 }
 
@@ -215,7 +271,7 @@ type LookupResult struct {
 	Heading        string
 	PrimaryReading string
 	GlossSummary   string
-	allReadings    string
+	allWritings    string
 	Priority       int
 	ID             int
 }
@@ -228,14 +284,14 @@ func (r LookupResult) relevance(query string) int {
 		tokens[i] = strings.ToLower(tokens[i])
 	}
 
-	readScore := 0
-	for _, reading := range strings.Fields(r.allReadings) {
-		reading = strings.ToLower(reading)
+	writeScore := 0
+	for _, w := range strings.Fields(r.allWritings) {
+		w = strings.ToLower(w)
 		for _, token := range tokens {
-			if reading == token {
-				readScore += 4
-			} else if strings.Contains(reading, token) {
-				readScore++
+			if w == token {
+				writeScore += 4
+			} else if strings.Contains(w, token) {
+				writeScore++
 			}
 		}
 	}
@@ -252,7 +308,7 @@ func (r LookupResult) relevance(query string) int {
 		}
 	}
 
-	return 2*readScore + 2*glossScore + r.Priority
+	return 2*writeScore + 2*glossScore + r.Priority
 }
 
 // Entry is a single entry in the JMdict dictionary.
@@ -270,13 +326,13 @@ func (e Entry) Heading() string {
 	if len(e.KanjiWritings) > 0 {
 		return e.KanjiWritings[0].Writing
 	}
-	return e.KanaWritings[0].Reading
+	return e.KanaWritings[0].Writing
 }
 
 // PrimaryReading returns the primary reading of the entry (the first kana
 // writing).
 func (e Entry) PrimaryReading() string {
-	return e.KanaWritings[0].Reading
+	return e.KanaWritings[0].Writing
 }
 
 // GlossSummary returns a summary of the glosses of the entry.
@@ -333,20 +389,20 @@ func (e Entry) Priority() int {
 	return pri
 }
 
-// allReadings returns a space-separated string containing all the readings of
+// allWritings returns a space-separated string containing all the writings of
 // the entry for lookup purposes.
-func (e Entry) allReadings() string {
+func (e Entry) allWritings() string {
 	readings := make([]string, 0, len(e.KanjiWritings)+len(e.KanaWritings))
-	for _, k := range e.KanjiWritings {
-		readings = append(readings, k.Writing)
+	for _, w := range e.KanjiWritings {
+		readings = append(readings, w.Writing)
 	}
-	for _, k := range e.KanaWritings {
-		readings = append(readings, k.Reading)
+	for _, w := range e.KanaWritings {
+		readings = append(readings, w.Writing)
 	}
 	return strings.Join(readings, " ")
 }
 
-// KanjiWriting is a reading for an entry using kanji or other non-kana
+// KanjiWriting is a writing for an entry using kanji or other non-kana
 // characters.
 type KanjiWriting struct {
 	Writing  string   `xml:"keb"`
@@ -354,9 +410,9 @@ type KanjiWriting struct {
 	Priority []string `xml:"ke_pri"`
 }
 
-// KanaWriting is a reading for an entry using kana.
+// KanaWriting is a writing for an entry using kana.
 type KanaWriting struct {
-	Reading      string   `xml:"reb"`
+	Writing      string   `xml:"reb"`
 	NoKanji      NoKanji  `xml:"re_nokanji"`
 	Restrictions []string `xml:"re_restr"`
 	Info         []string `xml:"re_inf"`

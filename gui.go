@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -30,13 +31,16 @@ var searchRevealer *gtk.Revealer
 var searchToggleButton *gtk.ToggleButton
 
 var searchResults = new(SearchResultList)
-var entryDisplay = new(EntryDisplay)
 var kanjiList = new(KanjiList)
 var kanjiDetails = new(KanjiDetails)
+var entryDisplay = &EntryDisplay{kanjiList: kanjiList}
+var navigation = &EntryNavigation{disp: entryDisplay}
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":                 &aboutDialog,
+	"backButton":                  &navigation.backButton,
 	"entryDetailsLabel":           &entryDisplay.detailsLabel,
+	"forwardButton":               &navigation.forwardButton,
 	"kanjiDetailsCharacterLabel":  &kanjiDetails.charLabel,
 	"kanjiDetailsDictRefsLabel":   &kanjiDetails.dictRefsLabel,
 	"kanjiDetailsReadingMeanings": &kanjiDetails.readingMeanings,
@@ -56,6 +60,14 @@ var appComponents = map[string]interface{}{
 }
 
 var signals = map[string]interface{}{
+	"activateLink": func(_ *gtk.Label, uri string) bool {
+		url, err := url.Parse(uri)
+		if err != nil {
+			log.Printf("Invalid URL: %v", uri)
+			return true
+		}
+		return navigation.FollowLink(url)
+	},
 	"hideWidget":  hideable.Hide,
 	"inhibitNext": func() bool { return true },
 	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
@@ -65,7 +77,9 @@ var signals = map[string]interface{}{
 	"moreInfoToggle": func() {
 		moreInfoRevealer.SetRevealChild(!moreInfoRevealer.GetRevealChild())
 	},
-	"searchChanged": searchChanged,
+	"navigateBack":    func() { navigation.GoBack() },
+	"navigateForward": func() { navigation.GoForward() },
+	"searchChanged":   searchChanged,
 	"searchEntryKeyPress": func(_ interface{}, ev *gdk.Event) {
 		keyEv := &gdk.EventKey{Event: ev}
 		if keyEv.KeyVal() == gdk.KEY_Escape {
@@ -78,12 +92,7 @@ var signals = map[string]interface{}{
 		if sel == nil {
 			return
 		}
-		if entry, err := dict.Fetch(sel.ID); err == nil {
-			entryDisplay.Display(entry)
-			kanjiList.Display(entry.AssociatedKanji())
-		} else {
-			log.Printf("Could not fetch entry with ID %v: %v", searchResults.Selected().ID, err)
-		}
+		navigation.GoTo(sel.ID)
 	},
 	"searchToggle": func() {
 		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
@@ -260,8 +269,107 @@ func stopSearch() {
 	searchRevealer.SetRevealChild(false)
 }
 
+// EntryNavigation is a wrapper around an EntryDisplay that supports maintaining
+// forwards and backwards navigation in a history of entries.
+type EntryNavigation struct {
+	disp          *EntryDisplay
+	backButton    *gtk.Button
+	forwardButton *gtk.Button
+	current       int
+	backStack     []int
+	forwardStack  []int
+}
+
+// FollowLink attempts to follow the given link and returns whether it was able
+// to do so.
+func (n *EntryNavigation) FollowLink(link *url.URL) bool {
+	if link.Scheme != "entry" {
+		return false
+	}
+
+	if entry, err := dict.FetchByRef(link.Host); err == nil {
+		// If I try to call goToEntry directly, then for some reason the program
+		// crashes (probably because the link text gets freed or otherwise
+		// corrupted after navigation)
+		glib.IdleAdd(func() { n.goToEntry(entry) })
+	} else {
+		log.Printf("Error fetching entry for link %v: %v", link, err)
+	}
+	return true
+}
+
+// GoTo navigates to the entry with the given ID.
+func (n *EntryNavigation) GoTo(id int) {
+	entry, err := dict.Fetch(id)
+	if err != nil {
+		log.Printf("Error fetching entry with ID %v: %v", id, err)
+		return
+	}
+
+	n.goToEntry(entry)
+}
+
+// GoBack navigates to the previous entry.
+func (n *EntryNavigation) GoBack() {
+	if len(n.backStack) == 0 {
+		return
+	}
+
+	if n.current != 0 {
+		n.forwardStack = append(n.forwardStack, n.current)
+	}
+	n.current = n.backStack[len(n.backStack)-1]
+	n.backStack = n.backStack[:len(n.backStack)-1]
+	n.updateSensitivity()
+
+	entry, err := dict.Fetch(n.current)
+	if err != nil {
+		log.Printf("Error fetching entry with ID %v: %v", n.current, err)
+		return
+	}
+	n.disp.Display(entry)
+}
+
+// GoForward navigates to the next entry.
+func (n *EntryNavigation) GoForward() {
+	if len(n.forwardStack) == 0 {
+		return
+	}
+
+	if n.current != 0 {
+		n.backStack = append(n.backStack, n.current)
+	}
+	n.current = n.forwardStack[len(n.forwardStack)-1]
+	n.forwardStack = n.forwardStack[:len(n.forwardStack)-1]
+	n.updateSensitivity()
+
+	entry, err := dict.Fetch(n.current)
+	if err != nil {
+		log.Printf("Error fetching entry with ID %v: %v", n.current, err)
+		return
+	}
+	n.disp.Display(entry)
+}
+
+func (n *EntryNavigation) goToEntry(e jmdict.Entry) {
+	if n.current != 0 {
+		n.backStack = append(n.backStack, n.current)
+	}
+	n.current = e.ID
+	n.forwardStack = nil
+	n.updateSensitivity()
+
+	n.disp.Display(e)
+}
+
+func (n *EntryNavigation) updateSensitivity() {
+	n.backButton.SetSensitive(len(n.backStack) > 0)
+	n.forwardButton.SetSensitive(len(n.forwardStack) > 0)
+}
+
 // EntryDisplay is the main display area for a dictionary entry.
 type EntryDisplay struct {
+	kanjiList          *KanjiList
 	primaryKanaLabel   *gtk.Label
 	primaryKanjiLabel  *gtk.Label
 	detailsLabel       *gtk.Label
@@ -287,6 +395,8 @@ func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 	disp.kanjiWritingsLabel.SetCanFocus(false)
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
 	disp.kanaWritingsLabel.SetCanFocus(false)
+
+	disp.kanjiList.Display(entry.AssociatedKanji())
 }
 
 func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
@@ -311,7 +421,7 @@ func fmtKanaReadings(kana []jmdict.KanaWriting) string {
 	var forms []string
 	for _, w := range kana {
 		sb := new(strings.Builder)
-		sb.WriteString(w.Reading)
+		sb.WriteString(w.Writing)
 		var details []string
 		info := strings.Join(w.Info, ", ")
 		if info != "" {
