@@ -207,8 +207,8 @@ func (t CodepointType) String() string {
 
 // Radical is a description of a character radical.
 type Radical struct {
-	Value string `xml:",chardata"`
-	Type  string `xml:"rad_type,attr"`
+	Value string      `xml:",chardata"`
+	Type  RadicalType `xml:"rad_type,attr"`
 }
 
 // RadicalType is a type of a radical.
@@ -482,7 +482,7 @@ type ReadingMeaningGroup struct {
 type Reading struct {
 	Reading string      `xml:",chardata"`
 	Type    ReadingType `xml:"r_type,attr"`
-	OnType  string      `xml:"on_type,attr"`
+	OnType  OnType      `xml:"on_type,attr"`
 	Jouyou  Jouyou      `xml:"r_status,attr"`
 }
 
@@ -490,7 +490,7 @@ type Reading struct {
 type ReadingType string
 
 const (
-	// PinyinReading is a Chinese reading in PinyinReading.
+	// PinyinReading is a Chinese reading in pinyin.
 	PinyinReading ReadingType = "pinyin"
 	// KoreanRomanizedReading is a romanized Korean reading.
 	KoreanRomanizedReading = "korean_r"
@@ -502,6 +502,39 @@ const (
 	OnReading = "ja_on"
 	// KunReading is a Japanese kun reading.
 	KunReading = "ja_kun"
+)
+
+func (t ReadingType) String() string {
+	switch t {
+	case PinyinReading:
+		return "pinyin"
+	case KoreanRomanizedReading:
+		return "Korean (romanized)"
+	case KoreanHangulReading:
+		return "Korean (Hangul)"
+	case VietnameseReading:
+		return "Vietnamese"
+	case OnReading:
+		return "on"
+	case KunReading:
+		return "kun"
+	default:
+		return string(t)
+	}
+}
+
+// OnType is the type of an on reading.
+type OnType string
+
+const (
+	// KanOn is a kan on reading.
+	KanOn OnType = "kan"
+	// GoOn is a go on reading.
+	GoOn = "go"
+	// TouOn is a tou on reading.
+	TouOn = "tou"
+	// KanyouOn is a kan'you on reading.
+	KanyouOn = "kan'you"
 )
 
 // Jouyou is a boolean value indicating whether a reading is approved for a

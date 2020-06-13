@@ -224,9 +224,13 @@ type LookupResult struct {
 // query.
 func (r LookupResult) relevance(query string) int {
 	tokens := strings.Fields(query)
+	for i := range tokens {
+		tokens[i] = strings.ToLower(tokens[i])
+	}
 
 	readScore := 0
 	for _, reading := range strings.Fields(r.allReadings) {
+		reading = strings.ToLower(reading)
 		for _, token := range tokens {
 			if reading == token {
 				readScore += 4
@@ -238,6 +242,7 @@ func (r LookupResult) relevance(query string) int {
 
 	glossScore := 0
 	for _, gloss := range strings.Split(r.GlossSummary, "; ") {
+		gloss = strings.ToLower(gloss)
 		for _, token := range tokens {
 			if gloss == token {
 				glossScore += 4
