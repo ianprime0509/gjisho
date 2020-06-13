@@ -272,6 +272,7 @@ type EntryDisplay struct {
 // Display displays the given dictionary entry in the display area.
 func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 	disp.primaryKanjiLabel.SetText(entry.Heading())
+	disp.primaryKanjiLabel.SetCanFocus(false)
 	if entry.Heading() != entry.PrimaryReading() {
 		disp.primaryKanaLabel.SetText(entry.PrimaryReading())
 		disp.primaryKanaLabel.Show()
@@ -279,21 +280,25 @@ func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 		disp.primaryKanaLabel.SetText("")
 		disp.primaryKanaLabel.Hide()
 	}
+	disp.primaryKanaLabel.SetCanFocus(false)
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
-	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiReadings))
-	disp.kanaWritingsLabel.SetMarkup(fmtKanaWritings(entry.KanaReadings))
+	disp.detailsLabel.SetCanFocus(false)
+	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiWritings))
+	disp.kanjiWritingsLabel.SetCanFocus(false)
+	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
+	disp.kanaWritingsLabel.SetCanFocus(false)
 }
 
-func fmtKanjiWritings(kanji []jmdict.KanjiReading) string {
+func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
 	if len(kanji) == 0 {
 		return "<i>None</i>"
 	}
 
 	var forms []string
-	for _, reading := range kanji {
+	for _, w := range kanji {
 		sb := new(strings.Builder)
-		sb.WriteString(reading.Reading)
-		info := strings.Join(reading.Info, ", ")
+		sb.WriteString(w.Writing)
+		info := strings.Join(w.Info, ", ")
 		if info != "" {
 			fmt.Fprintf(sb, " <i>%v</i>", info)
 		}
@@ -302,17 +307,17 @@ func fmtKanjiWritings(kanji []jmdict.KanjiReading) string {
 	return strings.Join(forms, "\n")
 }
 
-func fmtKanaWritings(kana []jmdict.KanaReading) string {
+func fmtKanaReadings(kana []jmdict.KanaWriting) string {
 	var forms []string
-	for _, reading := range kana {
+	for _, w := range kana {
 		sb := new(strings.Builder)
-		sb.WriteString(reading.Reading)
+		sb.WriteString(w.Reading)
 		var details []string
-		info := strings.Join(reading.Info, ", ")
+		info := strings.Join(w.Info, ", ")
 		if info != "" {
 			details = append(details, info)
 		}
-		restr := strings.Join(reading.Restrictions, ", ")
+		restr := strings.Join(w.Restrictions, ", ")
 		if restr != "" {
 			details = append(details, "restricted to "+restr)
 		}
@@ -463,7 +468,11 @@ type KanjiDetails struct {
 // the window).
 func (kd *KanjiDetails) Display(c kanjidic.Character) {
 	kd.charLabel.SetText(c.Literal)
+	// I'm not entirely sure why I have to set this explicitly, since it should
+	// be the default
+	kd.charLabel.SetCanFocus(false)
 	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
+	kd.subtitleLabel.SetCanFocus(false)
 	kd.readingMeanings.GetChildren().Foreach(func(c interface{}) {
 		kd.readingMeanings.Remove(c.(gtk.IWidget))
 	})
@@ -472,7 +481,9 @@ func (kd *KanjiDetails) Display(c kanjidic.Character) {
 	}
 	kd.readingMeanings.ShowAll()
 	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
+	kd.dictRefsLabel.SetCanFocus(false)
 	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
+	kd.queryCodesLabel.SetCanFocus(false)
 }
 
 // Present presents the kanji details window.
@@ -534,6 +545,9 @@ func newReadingMeaningLabel(rm kanjidic.ReadingMeaningGroup) *gtk.Label {
 	if len(on) > 0 {
 		fmt.Fprintf(sb, "<b>On:</b> %v\n", strings.Join(on, ", "))
 	}
+	if sb.Len() > 0 && len(rm.Meanings) > 0 {
+		sb.WriteRune('\n')
+	}
 
 	item := 1
 	for _, m := range rm.Meanings {
@@ -549,6 +563,7 @@ func newReadingMeaningLabel(rm kanjidic.ReadingMeaningGroup) *gtk.Label {
 	lbl.SetXAlign(0)
 	lbl.SetSelectable(true)
 	lbl.SetLineWrap(true)
+	lbl.SetCanFocus(false)
 	return lbl
 }
 

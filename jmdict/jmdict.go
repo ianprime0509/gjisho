@@ -258,25 +258,25 @@ func (r LookupResult) relevance(query string) int {
 // Entry is a single entry in the JMdict dictionary.
 type Entry struct {
 	ID            int            `xml:"ent_seq"`
-	KanjiReadings []KanjiReading `xml:"k_ele"`
-	KanaReadings  []KanaReading  `xml:"r_ele"`
+	KanjiWritings []KanjiWriting `xml:"k_ele"`
+	KanaWritings  []KanaWriting  `xml:"r_ele"`
 	Senses        []Sense        `xml:"sense"`
 }
 
 // Heading returns the primary heading of the entry for presentation purposes.
-// This is either the first kanji reading or, if there are no kanji readings,
-// the first kana reading.
+// This is either the first kanji writing or, if there are no kanji writings,
+// the first kana writing.
 func (e Entry) Heading() string {
-	if len(e.KanjiReadings) > 0 {
-		return e.KanjiReadings[0].Reading
+	if len(e.KanjiWritings) > 0 {
+		return e.KanjiWritings[0].Writing
 	}
-	return e.KanaReadings[0].Reading
+	return e.KanaWritings[0].Reading
 }
 
 // PrimaryReading returns the primary reading of the entry (the first kana
-// reading).
+// writing).
 func (e Entry) PrimaryReading() string {
-	return e.KanaReadings[0].Reading
+	return e.KanaWritings[0].Reading
 }
 
 // GlossSummary returns a summary of the glosses of the entry.
@@ -294,14 +294,14 @@ func (e Entry) GlossSummary() string {
 }
 
 // AssociatedKanji returns all the kanji associated with the entry (e.g. because
-// they are part of the entry's reading).
+// they are part of the entry's writing).
 func (e Entry) AssociatedKanji() []string {
 	// We want the set to be in order, so the value of the map is the index of the
 	// element
 	set := make(map[rune]int)
 	idx := 0
-	for _, r := range e.KanjiReadings {
-		for _, c := range r.Reading {
+	for _, r := range e.KanjiWritings {
+		for _, c := range r.Writing {
 			if unicode.Is(unicode.Han, c) {
 				if _, ok := set[c]; !ok {
 					set[c] = idx
@@ -324,10 +324,10 @@ func (e Entry) Priority() int {
 	pri := 0
 	// The current implementation is rather stupid and doesn't take into account
 	// the differences between the various priority lists
-	for _, k := range e.KanjiReadings {
+	for _, k := range e.KanjiWritings {
 		pri += len(k.Priority)
 	}
-	for _, k := range e.KanaReadings {
+	for _, k := range e.KanaWritings {
 		pri += len(k.Priority)
 	}
 	return pri
@@ -336,26 +336,26 @@ func (e Entry) Priority() int {
 // allReadings returns a space-separated string containing all the readings of
 // the entry for lookup purposes.
 func (e Entry) allReadings() string {
-	readings := make([]string, 0, len(e.KanjiReadings)+len(e.KanaReadings))
-	for _, k := range e.KanjiReadings {
-		readings = append(readings, k.Reading)
+	readings := make([]string, 0, len(e.KanjiWritings)+len(e.KanaWritings))
+	for _, k := range e.KanjiWritings {
+		readings = append(readings, k.Writing)
 	}
-	for _, k := range e.KanaReadings {
+	for _, k := range e.KanaWritings {
 		readings = append(readings, k.Reading)
 	}
 	return strings.Join(readings, " ")
 }
 
-// KanjiReading is a reading for an entry using kanji or other non-kana
+// KanjiWriting is a reading for an entry using kanji or other non-kana
 // characters.
-type KanjiReading struct {
-	Reading  string   `xml:"keb"`
+type KanjiWriting struct {
+	Writing  string   `xml:"keb"`
 	Info     []string `xml:"ke_inf"`
 	Priority []string `xml:"ke_pri"`
 }
 
-// KanaReading is a reading for an entry using kana.
-type KanaReading struct {
+// KanaWriting is a reading for an entry using kana.
+type KanaWriting struct {
 	Reading      string   `xml:"reb"`
 	NoKanji      NoKanji  `xml:"re_nokanji"`
 	Restrictions []string `xml:"re_restr"`
@@ -363,7 +363,7 @@ type KanaReading struct {
 	Priority     []string `xml:"re_pri"`
 }
 
-// NoKanji is a boolean indicating whether a kana reading is not a "true"
+// NoKanji is a boolean indicating whether a kana writing is not a "true"
 // reading of the kanji.
 type NoKanji bool
 
