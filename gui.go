@@ -16,6 +16,7 @@ import (
 	"github.com/gotk3/gotk3/pango"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
+	"github.com/ianprime0509/gjisho/tatoeba"
 )
 
 const appID = "com.github.ianprime0509.gjisho"
@@ -29,13 +30,15 @@ var searchToggleButton *gtk.ToggleButton
 var searchResults = new(SearchResultList)
 var kanjiList = new(KanjiList)
 var kanjiDetails = new(KanjiDetails)
-var entryDisplay = &EntryDisplay{kanjiList: kanjiList}
+var exampleList = new(ExampleList)
+var entryDisplay = &EntryDisplay{kanjiList: kanjiList, exampleList: exampleList}
 var navigation = &EntryNavigation{disp: entryDisplay}
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":                 &aboutDialog,
 	"backButton":                  &navigation.backButton,
 	"entryDetailsLabel":           &entryDisplay.detailsLabel,
+	"examplesList":                &exampleList.list,
 	"forwardButton":               &navigation.forwardButton,
 	"kanjiDetailsCharacterLabel":  &kanjiDetails.charLabel,
 	"kanjiDetailsDictRefsLabel":   &kanjiDetails.dictRefsLabel,
@@ -112,6 +115,7 @@ var signals = map[string]interface{}{
 
 var dict *jmdict.JMdict
 var kanjiDict *kanjidic.Kanjidic
+var exampleDict *tatoeba.Tatoeba
 
 // LaunchGUI launches the application user interface, passing the given
 // arguments to GTK. It does not return an error; if any errors occur here, the
@@ -130,6 +134,11 @@ func LaunchGUI(args []string) {
 	kanjiDict, err = kanjidic.New(db)
 	if err != nil {
 		log.Fatalf("Could not open Kanjidic handler: %v", err)
+	}
+
+	exampleDict, err = tatoeba.New(db)
+	if err != nil {
+		log.Fatalf("Could not open Tatoeba handler: %v", err)
 	}
 
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
@@ -195,9 +204,7 @@ func (lst *SearchResultList) Selected() *jmdict.LookupResult {
 // SetResults sets the currently displayed search results.
 func (lst *SearchResultList) SetResults(results []jmdict.LookupResult) {
 	lst.results = results
-	lst.list.GetChildren().Foreach(func(e interface{}) {
-		lst.list.Remove(e.(gtk.IWidget))
-	})
+	removeChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.ShowMore()
 }
@@ -375,6 +382,7 @@ func (n *EntryNavigation) updateSensitivity() {
 // EntryDisplay is the main display area for a dictionary entry.
 type EntryDisplay struct {
 	kanjiList          *KanjiList
+	exampleList        *ExampleList
 	primaryKanaLabel   *gtk.Label
 	primaryKanjiLabel  *gtk.Label
 	detailsLabel       *gtk.Label
@@ -397,6 +405,7 @@ func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
 
 	disp.kanjiList.Display(entry.AssociatedKanji())
+	disp.exampleList.Display(entry.Heading())
 }
 
 func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
@@ -522,7 +531,7 @@ type KanjiList struct {
 
 // Display displays information about the given kanji in the list.
 func (lst *KanjiList) Display(kanji []string) {
-	lst.list.GetChildren().Foreach(func(e interface{}) { lst.list.Remove(e.(gtk.IWidget)) })
+	removeChildren(&lst.list.Container)
 	lst.kanji = nil
 
 	for _, c := range kanji {
@@ -564,6 +573,44 @@ func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
 	return row
 }
 
+// ExampleList is a list of examples associated with an entry.
+type ExampleList struct {
+	list     *gtk.ListBox
+	examples []tatoeba.Example
+}
+
+// Display displays examples for the given word in the list.
+func (lst *ExampleList) Display(word string) {
+	removeChildren(&lst.list.Container)
+	var err error
+	lst.examples, err = exampleDict.FetchByWord(word)
+	if err != nil {
+		log.Printf("Error fetching examples for %q: %v", word, err)
+	}
+
+	for _, ex := range lst.examples {
+		lst.list.Add(newExampleListRow(ex))
+	}
+	lst.list.ShowAll()
+}
+
+func newExampleListRow(ex tatoeba.Example) *gtk.ListBoxRow {
+	row, _ := gtk.ListBoxRowNew()
+	rowBox, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+
+	jpnLabel, _ := gtk.LabelNew(ex.Japanese)
+	jpnLabel.SetLineWrap(true)
+	jpnLabel.SetXAlign(0)
+	rowBox.Add(jpnLabel)
+	engLabel, _ := gtk.LabelNew(ex.English)
+	engLabel.SetLineWrap(true)
+	engLabel.SetXAlign(0)
+	rowBox.Add(engLabel)
+
+	row.Add(rowBox)
+	return row
+}
+
 // KanjiDetails is a modal window showing additional details about a kanji.
 type KanjiDetails struct {
 	window          *gtk.Window
@@ -579,9 +626,7 @@ type KanjiDetails struct {
 func (kd *KanjiDetails) Display(c kanjidic.Character) {
 	kd.charLabel.SetText(c.Literal)
 	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-	kd.readingMeanings.GetChildren().Foreach(func(c interface{}) {
-		kd.readingMeanings.Remove(c.(gtk.IWidget))
-	})
+	removeChildren(&kd.readingMeanings.Container)
 	for _, rm := range c.ReadingMeaningGroups {
 		kd.readingMeanings.Add(newReadingMeaningLabel(rm))
 	}

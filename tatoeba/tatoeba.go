@@ -14,18 +14,24 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 )
 
 // Tatoeba is the Tatoeba database, containing Japanese-English example
 // sentences.
 type Tatoeba struct {
-	db *sql.DB
+	db               *sql.DB
+	fetchByWordQuery *sql.Stmt
 }
 
 // New returns a new Tatoeba using the given database.
 func New(db *sql.DB) (*Tatoeba, error) {
-	return &Tatoeba{db}, nil
+	fetchByWordQuery, err := db.Prepare("SELECT data FROM Example JOIN ExampleLookup ON id = example_id WHERE word = ?")
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare Tatoeba fetch by word query: %v", err)
+	}
+	return &Tatoeba{db, fetchByWordQuery}, nil
 }
 
 // ConvertInto converts the Tatoeba data from plain text into the given
@@ -132,6 +138,37 @@ func convertExample(ex Example, insertExample *sql.Stmt, insertLookup *sql.Stmt)
 	return nil
 }
 
+// FetchByWord returns all examples using the given word. The results are sorted
+// such that "better" examples of the word come first.
+func (tb *Tatoeba) FetchByWord(word string) ([]Example, error) {
+	rows, err := tb.fetchByWordQuery.Query(word)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
+
+	var results []Example
+	for rows.Next() {
+		var data []byte
+		if err := rows.Scan(&data); err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
+		var result Example
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, fmt.Errorf("could not unmarshal data: %v", err)
+		}
+		results = append(results, result)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %v", err)
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].relevance(word) > results[j].relevance(word)
+	})
+	return results, nil
+}
+
 // Example is an example sentence, presented in Japanese and English.
 type Example struct {
 	ID       string
@@ -186,6 +223,18 @@ func readExample(s *bufio.Scanner) (Example, error) {
 	}, nil
 }
 
+// relevance returns a relative "relevance" score of the example to the given
+// word. Currently, this is just 0 or 1 depending on whether the example is
+// considered a "good" example of the word.
+func (ex Example) relevance(word string) int {
+	for _, idx := range ex.Indices {
+		if word == idx.Word && idx.Good {
+			return 1
+		}
+	}
+	return 0
+}
+
 // Index is an index for an example sentence, giving details on a word used in
 // the sentence.
 type Index struct {
@@ -196,7 +245,7 @@ type Index struct {
 	Good           bool   // whether this sentence is considered a "good example" of the word
 }
 
-var indexRegexp = regexp.MustCompile(`^(.*?)(?:\((.*?)\))?(?:\[(.*?)\])?(?:\{(.*?)\})?(~)?`)
+var indexRegexp = regexp.MustCompile(`^([^[{(]*)(?:\(([^)]*)\))?(?:\[([^\]]*)\])?(?:\{([^}]*)\})?(~)?`)
 
 func parseIndex(raw string) (Index, error) {
 	parts := indexRegexp.FindStringSubmatch(raw)
