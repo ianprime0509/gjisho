@@ -63,9 +63,10 @@ Author: Ian Johnson <ianprime0509@gmail.com>
   </object>
   <object class="GtkApplicationWindow" id="appWindow">
     <property name="can_focus">False</property>
-    <property name="events">GDK_KEY_PRESS_MASK | GDK_STRUCTURE_MASK</property>
+    <property name="events">GDK_BUTTON_PRESS_MASK | GDK_KEY_PRESS_MASK | GDK_STRUCTURE_MASK</property>
     <property name="default_width">800</property>
     <property name="default_height">600</property>
+    <signal name="button-press-event" handler="windowButtonPress" swapped="no"/>
     <signal name="key-press-event" handler="windowKeyPress" swapped="no"/>
     <child>
       <object class="GtkBox">

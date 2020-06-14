@@ -97,6 +97,15 @@ var signals = map[string]interface{}{
 	"searchToggle": func() {
 		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
 	},
+	"windowButtonPress": func(_ interface{}, ev *gdk.Event) {
+		buttonEv := &gdk.EventButton{Event: ev}
+		switch buttonEv.Button() {
+		case 8:
+			navigation.GoBack()
+		case 9:
+			navigation.GoForward()
+		}
+	},
 	"windowKeyPress": func(_ interface{}, ev *gdk.Event) {
 		keyEv := &gdk.EventKey{Event: ev}
 		if keyEv.KeyVal() == gdk.KEY_f && keyEv.State()&gdk.GDK_CONTROL_MASK != 0 {
