@@ -20,10 +20,6 @@ import (
 
 const appID = "com.github.ianprime0509.gjisho"
 
-type hideable interface {
-	Hide()
-}
-
 var aboutDialog *gtk.AboutDialog
 var moreInfoRevealer *gtk.Revealer
 var searchEntry *gtk.SearchEntry
@@ -68,7 +64,7 @@ var signals = map[string]interface{}{
 		}
 		return navigation.FollowLink(url)
 	},
-	"hideWidget":  hideable.Hide,
+	"hideWidget":  func(w interface{ Hide() }) { w.Hide() },
 	"inhibitNext": func() bool { return true },
 	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 		kanjiDetails.Display(kanjiList.kanji[row.GetIndex()])
