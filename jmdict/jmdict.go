@@ -26,7 +26,7 @@ type JMdict struct {
 
 // New returns a new JMdict using the given database.
 func New(db *sql.DB) (*JMdict, error) {
-	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, all_writings, priority, id FROM Lookup WHERE Lookup MATCH ?")
+	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, all_writings, priority, id FROM Lookup WHERE EntryLookup MATCH ?")
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -63,9 +63,9 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Entry insert statement: %v", err)
 	}
-	insertLookup, err := tx.Prepare("INSERT INTO Lookup VALUES (?, ?, ?, ?, ?, ?)")
+	insertLookup, err := tx.Prepare("INSERT INTO EntryLookup VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
-		return fmt.Errorf("could not prepare Lookup insert statement: %v", err)
+		return fmt.Errorf("could not prepare EntryLookup insert statement: %v", err)
 	}
 
 	done := 0
@@ -109,7 +109,7 @@ func createTables(db *sql.DB) error {
 		return fmt.Errorf("could not create JMdict entry table: %v", err)
 	}
 
-	_, err = db.Exec(`CREATE VIRTUAL TABLE Lookup USING FTS5 (
+	_, err = db.Exec(`CREATE VIRTUAL TABLE EntryLookup USING FTS5 (
 		heading,
 		primary_reading,
 		gloss_summary,
@@ -143,7 +143,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry *sq
 	_, err = insertLookup.Exec(entry.Heading(), entry.PrimaryReading(), entry.GlossSummary(),
 		entry.allWritings(), entry.Priority(), entry.ID)
 	if err != nil {
-		return fmt.Errorf("could not insert Lookup data: %v", err)
+		return fmt.Errorf("could not insert EntryLookup data: %v", err)
 	}
 
 	return nil

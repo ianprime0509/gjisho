@@ -7,12 +7,14 @@ import (
 
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
+	"github.com/ianprime0509/gjisho/tatoeba"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var convertMode = flag.Bool("conv", false, "convert the given database")
 var jmdictPath = flag.String("jmdict", "", "path to the JMdict XML file")
 var kanjidicPath = flag.String("kanjidic", "", "path to the Kanjidic2 XML file")
+var tatoebaPath = flag.String("tatoeba", "", "path to the Tatoeba text file")
 
 func main() {
 	flag.Parse()
@@ -37,6 +39,11 @@ func convert(args []string) {
 	if *kanjidicPath != "" {
 		if err := kanjidic.ConvertInto(*kanjidicPath, db); err != nil {
 			log.Fatalf("Error converting Kanjidic: %v", err)
+		}
+	}
+	if *tatoebaPath != "" {
+		if err := tatoeba.ConvertInto(*tatoebaPath, db); err != nil {
+			log.Fatalf("Error converting Tatoeba: %v", err)
 		}
 	}
 }
