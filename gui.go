@@ -385,7 +385,6 @@ type EntryDisplay struct {
 // Display displays the given dictionary entry in the display area.
 func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 	disp.primaryKanjiLabel.SetText(entry.Heading())
-	disp.primaryKanjiLabel.SetCanFocus(false)
 	if entry.Heading() != entry.PrimaryReading() {
 		disp.primaryKanaLabel.SetText(entry.PrimaryReading())
 		disp.primaryKanaLabel.Show()
@@ -393,13 +392,9 @@ func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 		disp.primaryKanaLabel.SetText("")
 		disp.primaryKanaLabel.Hide()
 	}
-	disp.primaryKanaLabel.SetCanFocus(false)
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
-	disp.detailsLabel.SetCanFocus(false)
 	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiWritings))
-	disp.kanjiWritingsLabel.SetCanFocus(false)
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
-	disp.kanaWritingsLabel.SetCanFocus(false)
 
 	disp.kanjiList.Display(entry.AssociatedKanji())
 }
@@ -583,11 +578,7 @@ type KanjiDetails struct {
 // the window).
 func (kd *KanjiDetails) Display(c kanjidic.Character) {
 	kd.charLabel.SetText(c.Literal)
-	// I'm not entirely sure why I have to set this explicitly, since it should
-	// be the default
-	kd.charLabel.SetCanFocus(false)
 	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-	kd.subtitleLabel.SetCanFocus(false)
 	kd.readingMeanings.GetChildren().Foreach(func(c interface{}) {
 		kd.readingMeanings.Remove(c.(gtk.IWidget))
 	})
@@ -596,9 +587,7 @@ func (kd *KanjiDetails) Display(c kanjidic.Character) {
 	}
 	kd.readingMeanings.ShowAll()
 	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
-	kd.dictRefsLabel.SetCanFocus(false)
 	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
-	kd.queryCodesLabel.SetCanFocus(false)
 }
 
 // Present presents the kanji details window.
@@ -676,9 +665,7 @@ func newReadingMeaningLabel(rm kanjidic.ReadingMeaningGroup) *gtk.Label {
 	lbl, _ := gtk.LabelNew(sb.String())
 	lbl.SetUseMarkup(true)
 	lbl.SetXAlign(0)
-	lbl.SetSelectable(true)
 	lbl.SetLineWrap(true)
-	lbl.SetCanFocus(false)
 	return lbl
 }
 
