@@ -67,6 +67,11 @@ var signals = map[string]interface{}{
 		}
 		return navigation.FollowLink(url)
 	},
+	"examplesEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
+		if pos == gtk.POS_BOTTOM {
+			exampleList.ShowMore()
+		}
+	},
 	"hideWidget":  func(w interface{ Hide() }) { w.Hide() },
 	"inhibitNext": func() bool { return true },
 	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
@@ -85,7 +90,11 @@ var signals = map[string]interface{}{
 			stopSearch()
 		}
 	},
-	"searchResultsEndReached": func() { searchResults.ShowMore() },
+	"searchResultsEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
+		if pos == gtk.POS_BOTTOM {
+			searchResults.ShowMore()
+		}
+	},
 	"searchResultsRowSelected": func() {
 		sel := searchResults.Selected()
 		if sel == nil {
@@ -575,21 +584,28 @@ func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
 
 // ExampleList is a list of examples associated with an entry.
 type ExampleList struct {
-	list     *gtk.ListBox
-	examples []tatoeba.Example
+	list       *gtk.ListBox
+	examples   []tatoeba.Example
+	nDisplayed int
 }
 
 // Display displays examples for the given word in the list.
 func (lst *ExampleList) Display(word string) {
 	removeChildren(&lst.list.Container)
+	lst.nDisplayed = 0
 	var err error
 	lst.examples, err = exampleDict.FetchByWord(word)
 	if err != nil {
 		log.Printf("Error fetching examples for %q: %v", word, err)
 	}
+	lst.ShowMore()
+}
 
-	for _, ex := range lst.examples {
-		lst.list.Add(newExampleListRow(ex))
+// ShowMore displays more examples in the list.
+func (lst *ExampleList) ShowMore() {
+	maxIndex := lst.nDisplayed + 20
+	for ; lst.nDisplayed < maxIndex && lst.nDisplayed < len(lst.examples); lst.nDisplayed++ {
+		lst.list.Add(newExampleListRow(lst.examples[lst.nDisplayed]))
 	}
 	lst.list.ShowAll()
 }

@@ -120,7 +120,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="hscrollbar_policy">never</property>
-                    <signal name="edge-reached" handler="searchResultsEndReached" swapped="no"/>
+                    <signal name="edge-reached" handler="searchResultsEdgeReached" swapped="no"/>
                     <child>
                       <object class="GtkViewport">
                         <property name="visible">True</property>
@@ -422,6 +422,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="hscrollbar_policy">never</property>
+                            <signal name="edge-reached" handler="examplesEdgeReached" swapped="no"/>
                             <child>
                               <object class="GtkViewport">
                                 <property name="visible">True</property>
