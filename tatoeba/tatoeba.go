@@ -27,7 +27,7 @@ type Tatoeba struct {
 
 // New returns a new Tatoeba using the given database.
 func New(db *sql.DB) (*Tatoeba, error) {
-	fetchByWordQuery, err := db.Prepare("SELECT data FROM Example JOIN ExampleLookup ON id = example_id WHERE word = ?")
+	fetchByWordQuery, err := db.Prepare("SELECT data FROM Example WHERE id IN (SELECT DISTINCT example_id FROM ExampleLookup WHERE word = ?)")
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare Tatoeba fetch by word query: %v", err)
 	}
