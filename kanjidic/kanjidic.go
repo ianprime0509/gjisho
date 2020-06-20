@@ -90,7 +90,7 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 func createTables(db *sql.DB) error {
 	_, err := db.Exec(`CREATE TABLE Kanji (
 		character TEXT PRIMARY KEY,
-		data BLOB NOT NULL
+		data      BLOB NOT NULL
 	)`)
 	if err != nil {
 		return fmt.Errorf("could not create kanji table: %v", err)
@@ -102,18 +102,17 @@ func createTables(db *sql.DB) error {
 func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insert *sql.Stmt) error {
 	var entry Character
 	if err := decoder.DecodeElement(&entry, start); err != nil {
-		return fmt.Errorf("could not unmarshal entry XML: %v", err)
+		return fmt.Errorf("could not unmarshal kanji XML: %v", err)
 	}
 	data, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("could not marshal entry JSON: %v", err)
+		return fmt.Errorf("could not marshal kanji JSON: %v", err)
 	}
 
 	_, err = insert.Exec(entry.Literal, data)
 	if err != nil {
-		return fmt.Errorf("could not insert Kanji data: %v", err)
+		return fmt.Errorf("could not insert kanji data: %v", err)
 	}
-
 	return nil
 }
 
