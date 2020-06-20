@@ -23,11 +23,9 @@ const appID = "com.github.ianprime0509.gjisho"
 
 var aboutDialog *gtk.AboutDialog
 var moreInfoRevealer *gtk.Revealer
-var searchEntry *gtk.SearchEntry
-var searchRevealer *gtk.Revealer
-var searchToggleButton *gtk.ToggleButton
 
 var searchResults = new(SearchResultList)
+var search = &Search{results: searchResults}
 var kanjiList = new(KanjiList)
 var kanjiDetails = new(KanjiDetails)
 var exampleList = new(ExampleList)
@@ -52,10 +50,10 @@ var appComponents = map[string]interface{}{
 	"moreInfoRevealer":            &moreInfoRevealer,
 	"primaryKanaLabel":            &entryDisplay.primaryKanaLabel,
 	"primaryKanjiLabel":           &entryDisplay.primaryKanjiLabel,
-	"searchEntry":                 &searchEntry,
-	"searchRevealer":              &searchRevealer,
+	"searchEntry":                 &search.entry,
+	"searchRevealer":              &search.revealer,
 	"searchResults":               &searchResults.list,
-	"searchToggleButton":          &searchToggleButton,
+	"searchToggleButton":          &search.toggle,
 }
 
 var signals = map[string]interface{}{
@@ -83,11 +81,14 @@ var signals = map[string]interface{}{
 	},
 	"navigateBack":    func() { navigation.GoBack() },
 	"navigateForward": func() { navigation.GoForward() },
-	"searchChanged":   searchChanged,
+	"searchChanged": func(entry *gtk.SearchEntry) {
+		query, _ := entry.GetText()
+		search.Search(query)
+	},
 	"searchEntryKeyPress": func(_ interface{}, ev *gdk.Event) {
 		keyEv := &gdk.EventKey{Event: ev}
 		if keyEv.KeyVal() == gdk.KEY_Escape {
-			stopSearch()
+			search.Deactivate()
 		}
 	},
 	"searchResultsEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
@@ -102,9 +103,7 @@ var signals = map[string]interface{}{
 		}
 		navigation.GoTo(sel.ID)
 	},
-	"searchToggle": func() {
-		searchRevealer.SetRevealChild(!searchRevealer.GetRevealChild())
-	},
+	"searchToggle": search.Toggle,
 	"windowButtonPress": func(_ interface{}, ev *gdk.Event) {
 		buttonEv := &gdk.EventButton{Event: ev}
 		switch buttonEv.Button() {
@@ -117,7 +116,7 @@ var signals = map[string]interface{}{
 	"windowKeyPress": func(_ interface{}, ev *gdk.Event) {
 		keyEv := &gdk.EventKey{Event: ev}
 		if keyEv.KeyVal() == gdk.KEY_f && keyEv.State()&gdk.GDK_CONTROL_MASK != 0 {
-			startSearch()
+			search.Activate()
 		}
 	},
 }
@@ -194,6 +193,65 @@ func getAppComponents(builder *gtk.Builder) {
 	}
 }
 
+// Search is a wrapper around the search-related components of the app.
+type Search struct {
+	toggle         *gtk.ToggleButton
+	revealer       *gtk.Revealer
+	entry          *gtk.SearchEntry
+	results        *SearchResultList
+	cancelPrevious context.CancelFunc // a function to cancel the previous search
+}
+
+// Search searches using the given query.
+func (s *Search) Search(query string) {
+	ctx := s.startSearch()
+	ch := make(chan []jmdict.LookupResult)
+
+	go func() {
+		if results, err := dict.Lookup(query); err == nil {
+			ch <- results
+		} else {
+			log.Printf("Lookup query error: %v", err)
+		}
+		close(ch)
+	}()
+
+	go func() {
+		select {
+		case results := <-ch:
+			glib.IdleAdd(func() { s.results.Set(results) })
+		case <-ctx.Done():
+		}
+	}()
+}
+
+// Toggle toggles whether the search pane is open.
+func (s *Search) Toggle() {
+	s.revealer.SetRevealChild(!s.revealer.GetRevealChild())
+}
+
+// Activate activates and focuses the search entry.
+func (s *Search) Activate() {
+	s.toggle.SetActive(true)
+	s.revealer.SetRevealChild(true)
+	s.entry.GrabFocus()
+}
+
+// Deactivate deactivates the search entry.
+func (s *Search) Deactivate() {
+	s.toggle.SetActive(false)
+	s.revealer.SetRevealChild(false)
+}
+
+func (s *Search) startSearch() context.Context {
+	if s.cancelPrevious != nil {
+		s.cancelPrevious()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancelPrevious = cancel
+	return ctx
+}
+
 // SearchResultList is a list of search results displayed in the GUI.
 type SearchResultList struct {
 	list       *gtk.ListBox
@@ -210,8 +268,8 @@ func (lst *SearchResultList) Selected() *jmdict.LookupResult {
 	return nil
 }
 
-// SetResults sets the currently displayed search results.
-func (lst *SearchResultList) SetResults(results []jmdict.LookupResult) {
+// Set sets the currently displayed search results.
+func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
 	lst.results = results
 	removeChildren(&lst.list.Container)
 	lst.nDisplayed = 0
@@ -251,44 +309,6 @@ func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
 	return box
 }
 
-// searchCancel is a function that can be called to cancel the previous search.
-var searchCancel context.CancelFunc
-
-func searchChanged(entry *gtk.SearchEntry) {
-	if searchCancel != nil {
-		searchCancel()
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	// This function will only be called on the GUI thread, so this is OK
-	searchCancel = cancel
-
-	query, _ := entry.GetText()
-	go func() {
-		results, err := dict.Lookup(query)
-		// Only update the results if this search wasn't cancelled
-		select {
-		case <-ctx.Done():
-		default:
-			if err == nil {
-				glib.IdleAdd(func() { searchResults.SetResults(results) })
-			} else {
-				log.Printf("Lookup query error: %v", err)
-			}
-		}
-	}()
-}
-
-func startSearch() {
-	searchToggleButton.SetActive(true)
-	searchRevealer.SetRevealChild(true)
-	searchEntry.GrabFocus()
-}
-
-func stopSearch() {
-	searchToggleButton.SetActive(false)
-	searchRevealer.SetRevealChild(false)
-}
-
 // EntryNavigation is a wrapper around an EntryDisplay that supports maintaining
 // forwards and backwards navigation in a history of entries.
 type EntryNavigation struct {
@@ -298,7 +318,7 @@ type EntryNavigation struct {
 	current        int
 	backStack      []int
 	forwardStack   []int
-	cancelPrevious context.CancelFunc // a function to cancel any previous navigation operation
+	cancelPrevious context.CancelFunc // a function to cancel the previous navigation operation
 }
 
 // FollowLink attempts to follow the given link and returns whether it was able
@@ -407,6 +427,7 @@ func (disp *EntryDisplay) FetchAndDisplay(ctx context.Context, id int) {
 		} else {
 			log.Printf("Error fetching entry with ID %v: %v", id, err)
 		}
+		close(ch)
 	}()
 
 	go func() {
@@ -570,6 +591,7 @@ func (lst *KanjiList) FetchAndDisplay(ctx context.Context, kanji []string) {
 			}
 		}
 		ch <- results
+		close(ch)
 	}()
 
 	go func() {
@@ -633,6 +655,7 @@ func (lst *ExampleList) FetchAndDisplay(ctx context.Context, word string) {
 		} else {
 			log.Printf("Error fetching examples for %q: %v", word, err)
 		}
+		close(ch)
 	}()
 
 	go func() {
