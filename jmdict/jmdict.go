@@ -290,7 +290,7 @@ func (r LookupResult) relevance(query string) int {
 		w = strings.ToLower(w)
 		for _, token := range tokens {
 			if w == token {
-				writeScore += 4
+				writeScore += 7
 			} else if strings.Contains(w, token) {
 				writeScore++
 			}
@@ -302,14 +302,14 @@ func (r LookupResult) relevance(query string) int {
 		gloss = strings.ToLower(gloss)
 		for _, token := range tokens {
 			if gloss == token {
-				glossScore += 4
+				glossScore += 7
 			} else if strings.Contains(gloss, token) {
 				glossScore++
 			}
 		}
 	}
 
-	return 2*writeScore + 2*glossScore + r.Priority
+	return 5*writeScore + 5*glossScore + 2*r.Priority
 }
 
 // Entry is a single entry in the JMdict dictionary.
