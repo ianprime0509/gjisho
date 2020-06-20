@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -8,7 +9,6 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"sync/atomic"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -251,30 +251,29 @@ func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
 	return box
 }
 
-// Consider the situation where a search query comes in that takes a long time,
-// followed by one that takes less time. To avoid having the results of the
-// first query come in later and overwrite the results of the second, we use a
-// counter to identify the queries in sequence and prevent overwriting newer
-// query results with older ones.
-var queryCounter uint32
-var currentQuery uint32
+// searchCancel is a function that can be called to cancel the previous search.
+var searchCancel context.CancelFunc
 
 func searchChanged(entry *gtk.SearchEntry) {
+	if searchCancel != nil {
+		searchCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	// This function will only be called on the GUI thread, so this is OK
+	searchCancel = cancel
+
 	query, _ := entry.GetText()
 	go func() {
-		queryNum := atomic.AddUint32(&queryCounter, 1)
 		results, err := dict.Lookup(query)
-		if err == nil {
-			glib.IdleAdd(func() {
-				// There is no race condition here since this function will only be
-				// executed on the main thread
-				if queryNum > currentQuery {
-					searchResults.SetResults(results)
-					currentQuery = queryNum
-				}
-			})
-		} else {
-			log.Printf("Lookup query error: %v", err)
+		// Only update the results if this search wasn't cancelled
+		select {
+		case <-ctx.Done():
+		default:
+			if err == nil {
+				glib.IdleAdd(func() { searchResults.SetResults(results) })
+			} else {
+				log.Printf("Lookup query error: %v", err)
+			}
 		}
 	}()
 }
@@ -293,12 +292,13 @@ func stopSearch() {
 // EntryNavigation is a wrapper around an EntryDisplay that supports maintaining
 // forwards and backwards navigation in a history of entries.
 type EntryNavigation struct {
-	disp          *EntryDisplay
-	backButton    *gtk.Button
-	forwardButton *gtk.Button
-	current       int
-	backStack     []int
-	forwardStack  []int
+	disp           *EntryDisplay
+	backButton     *gtk.Button
+	forwardButton  *gtk.Button
+	current        int
+	backStack      []int
+	forwardStack   []int
+	cancelPrevious context.CancelFunc // a function to cancel any previous navigation operation
 }
 
 // FollowLink attempts to follow the given link and returns whether it was able
@@ -308,11 +308,11 @@ func (n *EntryNavigation) FollowLink(link *url.URL) bool {
 		return false
 	}
 
-	if entry, err := dict.FetchByRef(link.Host); err == nil {
-		// If I try to call goToEntry directly, then for some reason the program
+	if match, err := dict.LookupByRef(link.Host); err == nil {
+		// If I try to call GoTo directly, then for some reason the program
 		// crashes (probably because the link text gets freed or otherwise
 		// corrupted after navigation)
-		glib.IdleAdd(func() { n.goToEntry(entry) })
+		glib.IdleAdd(func() { n.GoTo(match.ID) })
 	} else {
 		log.Printf("Error fetching entry for link %v: %v", link, err)
 	}
@@ -321,13 +321,16 @@ func (n *EntryNavigation) FollowLink(link *url.URL) bool {
 
 // GoTo navigates to the entry with the given ID.
 func (n *EntryNavigation) GoTo(id int) {
-	entry, err := dict.Fetch(id)
-	if err != nil {
-		log.Printf("Error fetching entry with ID %v: %v", id, err)
-		return
-	}
+	ctx := n.startNavigation()
 
-	n.goToEntry(entry)
+	if n.current != 0 {
+		n.backStack = append(n.backStack, n.current)
+	}
+	n.current = id
+	n.forwardStack = nil
+	n.updateSensitivity()
+
+	n.disp.FetchAndDisplay(ctx, id)
 }
 
 // GoBack navigates to the previous entry.
@@ -336,6 +339,8 @@ func (n *EntryNavigation) GoBack() {
 		return
 	}
 
+	ctx := n.startNavigation()
+
 	if n.current != 0 {
 		n.forwardStack = append(n.forwardStack, n.current)
 	}
@@ -343,12 +348,7 @@ func (n *EntryNavigation) GoBack() {
 	n.backStack = n.backStack[:len(n.backStack)-1]
 	n.updateSensitivity()
 
-	entry, err := dict.Fetch(n.current)
-	if err != nil {
-		log.Printf("Error fetching entry with ID %v: %v", n.current, err)
-		return
-	}
-	n.disp.Display(entry)
+	n.disp.FetchAndDisplay(ctx, n.current)
 }
 
 // GoForward navigates to the next entry.
@@ -357,6 +357,8 @@ func (n *EntryNavigation) GoForward() {
 		return
 	}
 
+	ctx := n.startNavigation()
+
 	if n.current != 0 {
 		n.backStack = append(n.backStack, n.current)
 	}
@@ -364,23 +366,18 @@ func (n *EntryNavigation) GoForward() {
 	n.forwardStack = n.forwardStack[:len(n.forwardStack)-1]
 	n.updateSensitivity()
 
-	entry, err := dict.Fetch(n.current)
-	if err != nil {
-		log.Printf("Error fetching entry with ID %v: %v", n.current, err)
-		return
-	}
-	n.disp.Display(entry)
+	n.disp.FetchAndDisplay(ctx, n.current)
 }
 
-func (n *EntryNavigation) goToEntry(e jmdict.Entry) {
-	if n.current != 0 {
-		n.backStack = append(n.backStack, n.current)
+// startNavigation cancels any previous navigation in progress and returns a
+// context for a new one.
+func (n *EntryNavigation) startNavigation() context.Context {
+	if n.cancelPrevious != nil {
+		n.cancelPrevious()
 	}
-	n.current = e.ID
-	n.forwardStack = nil
-	n.updateSensitivity()
-
-	n.disp.Display(e)
+	ctx, cancel := context.WithCancel(context.Background())
+	n.cancelPrevious = cancel
+	return ctx
 }
 
 func (n *EntryNavigation) updateSensitivity() {
@@ -397,10 +394,34 @@ type EntryDisplay struct {
 	detailsLabel       *gtk.Label
 	kanjiWritingsLabel *gtk.Label
 	kanaWritingsLabel  *gtk.Label
+	cancelDisplay      context.CancelFunc
 }
 
-// Display displays the given dictionary entry in the display area.
-func (disp *EntryDisplay) Display(entry jmdict.Entry) {
+// FetchAndDisplay fetches and displays the dictionary entry with the given ID
+// in the display area.
+func (disp *EntryDisplay) FetchAndDisplay(ctx context.Context, id int) {
+	ch := make(chan jmdict.Entry)
+	go func() {
+		if entry, err := dict.Fetch(id); err == nil {
+			ch <- entry
+		} else {
+			log.Printf("Error fetching entry with ID %v: %v", id, err)
+		}
+	}()
+
+	go func() {
+		select {
+		case entry := <-ch:
+			glib.IdleAdd(func() { disp.display(entry) })
+
+			disp.kanjiList.FetchAndDisplay(ctx, entry.AssociatedKanji())
+			disp.exampleList.FetchAndDisplay(ctx, entry.Heading())
+		case <-ctx.Done():
+		}
+	}()
+}
+
+func (disp *EntryDisplay) display(entry jmdict.Entry) {
 	disp.primaryKanjiLabel.SetText(entry.Heading())
 	if entry.Heading() != entry.PrimaryReading() {
 		disp.primaryKanaLabel.SetText(entry.PrimaryReading())
@@ -412,9 +433,6 @@ func (disp *EntryDisplay) Display(entry jmdict.Entry) {
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
 	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiWritings))
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
-
-	disp.kanjiList.Display(entry.AssociatedKanji())
-	disp.exampleList.Display(entry.Heading())
 }
 
 func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
@@ -538,20 +556,37 @@ type KanjiList struct {
 	kanji []kanjidic.Character
 }
 
-// Display displays information about the given kanji in the list.
-func (lst *KanjiList) Display(kanji []string) {
-	removeChildren(&lst.list.Container)
-	lst.kanji = nil
-
-	for _, c := range kanji {
-		if result, err := kanjiDict.Fetch(c); err == nil {
-			lst.list.Add(newKanjiListRow(result))
-			lst.kanji = append(lst.kanji, result)
-		} else {
-			log.Printf("Error fetching kanji information for %q: %v", c, err)
+// FetchAndDisplay fetches and displays information about the given kanji in the
+// list.
+func (lst *KanjiList) FetchAndDisplay(ctx context.Context, kanji []string) {
+	ch := make(chan []kanjidic.Character)
+	go func() {
+		var results []kanjidic.Character
+		for _, c := range kanji {
+			if res, err := kanjiDict.Fetch(c); err == nil {
+				results = append(results, res)
+			} else {
+				log.Printf("Error fetching kanji information for %q: %v", c, err)
+			}
 		}
-	}
+		ch <- results
+	}()
 
+	go func() {
+		select {
+		case kanji := <-ch:
+			glib.IdleAdd(func() { lst.display(kanji) })
+		case <-ctx.Done():
+		}
+	}()
+}
+
+func (lst *KanjiList) display(kanji []kanjidic.Character) {
+	removeChildren(&lst.list.Container)
+	lst.kanji = kanji
+	for _, result := range lst.kanji {
+		lst.list.Add(newKanjiListRow(result))
+	}
 	lst.list.ShowAll()
 }
 
@@ -589,16 +624,24 @@ type ExampleList struct {
 	nDisplayed int
 }
 
-// Display displays examples for the given word in the list.
-func (lst *ExampleList) Display(word string) {
-	removeChildren(&lst.list.Container)
-	lst.nDisplayed = 0
-	var err error
-	lst.examples, err = exampleDict.FetchByWord(word)
-	if err != nil {
-		log.Printf("Error fetching examples for %q: %v", word, err)
-	}
-	lst.ShowMore()
+// FetchAndDisplay fetches and displays examples for the given word in the list.
+func (lst *ExampleList) FetchAndDisplay(ctx context.Context, word string) {
+	ch := make(chan []tatoeba.Example)
+	go func() {
+		if examples, err := exampleDict.FetchByWord(word); err == nil {
+			ch <- examples
+		} else {
+			log.Printf("Error fetching examples for %q: %v", word, err)
+		}
+	}()
+
+	go func() {
+		select {
+		case examples := <-ch:
+			glib.IdleAdd(func() { lst.display(examples) })
+		case <-ctx.Done():
+		}
+	}()
 }
 
 // ShowMore displays more examples in the list.
@@ -608,6 +651,13 @@ func (lst *ExampleList) ShowMore() {
 		lst.list.Add(newExampleListRow(lst.examples[lst.nDisplayed]))
 	}
 	lst.list.ShowAll()
+}
+
+func (lst *ExampleList) display(examples []tatoeba.Example) {
+	removeChildren(&lst.list.Container)
+	lst.nDisplayed = 0
+	lst.examples = examples
+	lst.ShowMore()
 }
 
 func newExampleListRow(ex tatoeba.Example) *gtk.ListBoxRow {

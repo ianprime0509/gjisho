@@ -164,10 +164,28 @@ func (dict *JMdict) Fetch(id int) (Entry, error) {
 	return entry, nil
 }
 
-// FetchByRef returns the dictionary entry that most closely matches the given
-// reference. The reference is expected to follow the standard format for cross
-// references, using ・ as a separator between parts.
-func (dict *JMdict) FetchByRef(ref string) (Entry, error) {
+// Lookup looks up dictionary entries according to the given query. The results
+// are sorted such that the ones deemed most relevant to the query come first.
+func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
+	if query == "" {
+		return nil, nil
+	}
+
+	results, err := dict.lookupRaw(convertQuery(query))
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].relevance(query) > results[j].relevance(query)
+	})
+
+	return results, nil
+}
+
+// LookupByRef returns the lookup result for the entry that most closely matches
+// the given reference. The reference is expected to follow the standard format
+// for cross references, using ・ as a separator between parts.
+func (dict *JMdict) LookupByRef(ref string) (LookupResult, error) {
 	parts := strings.Split(ref, "・")
 	head := parts[0]
 	reading := ""
@@ -177,7 +195,7 @@ func (dict *JMdict) FetchByRef(ref string) (Entry, error) {
 
 	results, err := dict.lookupRaw(fmt.Sprintf(`"%v"`, strings.ReplaceAll(parts[0], `"`, `""`)))
 	if err != nil {
-		return Entry{}, fmt.Errorf("could not search for writing %q: %v", ref, err)
+		return LookupResult{}, fmt.Errorf("could not search for reference %q: %v", ref, err)
 	}
 
 	match := LookupResult{}
@@ -203,28 +221,10 @@ func (dict *JMdict) FetchByRef(ref string) (Entry, error) {
 		}
 	}
 	if match.ID == 0 {
-		return Entry{}, fmt.Errorf("no results for writing %q", ref)
+		return LookupResult{}, fmt.Errorf("no results for reference %q", ref)
 	}
 
-	return dict.Fetch(match.ID)
-}
-
-// Lookup looks up dictionary entries according to the given query. The results
-// are sorted such that the ones deemed most relevant to the query come first.
-func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
-	if query == "" {
-		return nil, nil
-	}
-
-	results, err := dict.lookupRaw(convertQuery(query))
-	if err != nil {
-		return nil, err
-	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].relevance(query) > results[j].relevance(query)
-	})
-
-	return results, nil
+	return match, nil
 }
 
 // lookupRaw is the same as Lookup, but uses a raw FTS5 query rather than a
