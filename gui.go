@@ -71,8 +71,7 @@ var signals = map[string]interface{}{
 	"hideWidget":  func(w interface{ Hide() }) { w.Hide() },
 	"inhibitNext": func() bool { return true },
 	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
-		kanjiDetails.Display(kanjiList.kanji[row.GetIndex()])
-		kanjiDetails.Present()
+		kanjiDetails.FetchAndDisplay(kanjiList.kanji[row.GetIndex()])
 	},
 	"moreInfoToggle": func() {
 		moreInfoRevealer.SetRevealChild(!moreInfoRevealer.GetRevealChild())

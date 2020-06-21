@@ -697,6 +697,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                           <object class="GtkBox" id="kanjiDetailsStrokeOrder">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="halign">center</property>
                             <property name="margin_start">5</property>
                             <property name="margin_end">5</property>
                             <property name="margin_top">5</property>

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gotk3/gotk3/cairo"
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
@@ -25,14 +26,14 @@ type KanjiDetails struct {
 	cancelPrevious  context.CancelFunc
 }
 
-// Display displays the given kanji in the window (but does not immediately show
-// the window).
-func (kd *KanjiDetails) Display(c kanjidic.Character) {
+// FetchAndDisplay fetches additional information about the given kanji and
+// displays it in the window (which is then shown).
+func (kd *KanjiDetails) FetchAndDisplay(c kanjidic.Character) {
 	ctx := kd.startDisplay()
 	ch := make(chan kanjivg.Kanji)
 	go func() {
-		if kanji, err := strokeDict.Fetch(c.Literal); err == nil {
-			ch <- kanji
+		if k, err := strokeDict.Fetch(c.Literal); err == nil {
+			ch <- k
 		} else {
 			log.Printf("Could not fetch kanji stroke information: %v", err)
 		}
@@ -41,24 +42,24 @@ func (kd *KanjiDetails) Display(c kanjidic.Character) {
 
 	go func() {
 		select {
-		case kanji := <-ch:
-			kd.charLabel.SetText(c.Literal)
-			kd.drawStrokes(kanji)
-			kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-			removeChildren(&kd.readingMeanings.Container)
-			for _, rm := range c.ReadingMeaningGroups {
-				kd.readingMeanings.Add(newReadingMeaningLabel(rm))
-			}
-			kd.readingMeanings.ShowAll()
-			kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
-			kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
+		case k := <-ch:
+			glib.IdleAdd(func() { kd.display(c, k) })
 		case <-ctx.Done():
 		}
 	}()
 }
 
-// Present presents the kanji details window.
-func (kd *KanjiDetails) Present() {
+func (kd *KanjiDetails) display(c kanjidic.Character, k kanjivg.Kanji) {
+	kd.charLabel.SetText(c.Literal)
+	kd.drawStrokes(k)
+	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
+	removeChildren(&kd.readingMeanings.Container)
+	for _, rm := range c.ReadingMeaningGroups {
+		kd.readingMeanings.Add(newReadingMeaningLabel(rm))
+	}
+	kd.readingMeanings.ShowAll()
+	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
+	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
 	kd.window.Present()
 }
 
