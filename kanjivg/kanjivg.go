@@ -156,6 +156,21 @@ func decodeEntry(decoder *xml.Decoder, start *xml.StartElement) (Kanji, error) {
 	return Kanji{}, err
 }
 
+// Fetch returns the stroke order data for the given kanji.
+func (kvg *KanjiVG) Fetch(kanji string) (Kanji, error) {
+	var data []byte
+	if err := kvg.fetchQuery.QueryRow(kanji).Scan(&data); err != nil {
+		return Kanji{}, fmt.Errorf("scan error: %v", err)
+	}
+
+	var character Kanji
+	if err := json.Unmarshal(data, &character); err != nil {
+		return Kanji{}, fmt.Errorf("could not unmarshal data: %v", err)
+	}
+
+	return character, nil
+}
+
 // Kanji is a kanji with associated drawing (stroke) information.
 type Kanji struct {
 	Literal string
@@ -229,7 +244,7 @@ func (s Stroke) DrawTo(d Drawer, markStart bool) {
 }
 
 var commandRegexp = regexp.MustCompile(`^.*?([MmCc])`)
-var argRegexp = regexp.MustCompile(`^[^MmCc]*?([0-9]+\.?[0-9]*)`)
+var argRegexp = regexp.MustCompile(`^[^MmCc]*?(-?[0-9]+\.?[0-9]*)`)
 
 func ensureArgs(args []float64, n int) []float64 {
 	for len(args) < n {

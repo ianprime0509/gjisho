@@ -12,6 +12,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
+	"github.com/ianprime0509/gjisho/kanjivg"
 	"github.com/ianprime0509/gjisho/tatoeba"
 )
 
@@ -37,6 +38,7 @@ var appComponents = map[string]interface{}{
 	"kanjiDetailsCharacterLabel":  &kanjiDetails.charLabel,
 	"kanjiDetailsDictRefsLabel":   &kanjiDetails.dictRefsLabel,
 	"kanjiDetailsReadingMeanings": &kanjiDetails.readingMeanings,
+	"kanjiDetailsStrokeOrder":     &kanjiDetails.strokeOrder,
 	"kanjiDetailsSubtitleLabel":   &kanjiDetails.subtitleLabel,
 	"kanjiDetailsQueryCodesLabel": &kanjiDetails.queryCodesLabel,
 	"kanjiDetailsWindow":          &kanjiDetails.window,
@@ -120,6 +122,7 @@ var signals = map[string]interface{}{
 var dict *jmdict.JMdict
 var kanjiDict *kanjidic.Kanjidic
 var exampleDict *tatoeba.Tatoeba
+var strokeDict *kanjivg.KanjiVG
 
 // LaunchGUI launches the application user interface, passing the given
 // arguments to GTK. It does not return an error; if any errors occur here, the
@@ -143,6 +146,11 @@ func LaunchGUI(args []string) {
 	exampleDict, err = tatoeba.New(db)
 	if err != nil {
 		log.Fatalf("Could not open Tatoeba handler: %v", err)
+	}
+
+	strokeDict, err = kanjivg.New(db)
+	if err != nil {
+		log.Fatalf("Could not open KanjiVG handler: %v", err)
 	}
 
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)

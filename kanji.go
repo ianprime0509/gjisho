@@ -1,40 +1,102 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"strconv"
 	"strings"
 
+	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/ianprime0509/gjisho/kanjidic"
+	"github.com/ianprime0509/gjisho/kanjivg"
 )
 
 // KanjiDetails is a modal window showing additional details about a kanji.
 type KanjiDetails struct {
 	window          *gtk.Window
+	strokeOrder     *gtk.Box
 	charLabel       *gtk.Label
 	subtitleLabel   *gtk.Label
 	readingMeanings *gtk.Box
 	dictRefsLabel   *gtk.Label
 	queryCodesLabel *gtk.Label
+	cancelPrevious  context.CancelFunc
 }
 
 // Display displays the given kanji in the window (but does not immediately show
 // the window).
 func (kd *KanjiDetails) Display(c kanjidic.Character) {
-	kd.charLabel.SetText(c.Literal)
-	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-	removeChildren(&kd.readingMeanings.Container)
-	for _, rm := range c.ReadingMeaningGroups {
-		kd.readingMeanings.Add(newReadingMeaningLabel(rm))
-	}
-	kd.readingMeanings.ShowAll()
-	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
-	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
+	ctx := kd.startDisplay()
+	ch := make(chan kanjivg.Kanji)
+	go func() {
+		if kanji, err := strokeDict.Fetch(c.Literal); err == nil {
+			ch <- kanji
+		} else {
+			log.Printf("Could not fetch kanji stroke information: %v", err)
+		}
+		close(ch)
+	}()
+
+	go func() {
+		select {
+		case kanji := <-ch:
+			kd.charLabel.SetText(c.Literal)
+			kd.drawStrokes(kanji)
+			kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
+			removeChildren(&kd.readingMeanings.Container)
+			for _, rm := range c.ReadingMeaningGroups {
+				kd.readingMeanings.Add(newReadingMeaningLabel(rm))
+			}
+			kd.readingMeanings.ShowAll()
+			kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
+			kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
+		case <-ctx.Done():
+		}
+	}()
 }
 
 // Present presents the kanji details window.
 func (kd *KanjiDetails) Present() {
 	kd.window.Present()
+}
+
+func (kd *KanjiDetails) startDisplay() context.Context {
+	if kd.cancelPrevious != nil {
+		kd.cancelPrevious()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	kd.cancelPrevious = cancel
+	return ctx
+}
+
+func (kd *KanjiDetails) drawStrokes(kanji kanjivg.Kanji) {
+	drawTo := func(n int) *gtk.DrawingArea {
+		da, _ := gtk.DrawingAreaNew()
+		da.SetSizeRequest(54, 54)
+		da.Connect("draw", func(_ *gtk.DrawingArea, ctx *cairo.Context) {
+			num := strconv.Itoa(n + 1)
+			extents := ctx.TextExtents(num)
+			ctx.MoveTo(-extents.XBearing, -extents.YBearing)
+			ctx.ShowText(strconv.Itoa(n + 1))
+
+			ctx.Scale(0.5, 0.5)
+			ctx.SetSourceRGB(0.5, 0.5, 0.5)
+			for i := 0; i < n; i++ {
+				kanji.Strokes[i].DrawTo(ctx, false)
+			}
+			ctx.SetSourceRGB(0, 0, 0)
+			kanji.Strokes[n].DrawTo(ctx, true)
+		})
+		return da
+	}
+
+	removeChildren(&kd.strokeOrder.Container)
+	for i := range kanji.Strokes {
+		kd.strokeOrder.Add(drawTo(i))
+	}
+	kd.strokeOrder.ShowAll()
 }
 
 func fmtSubtitle(c kanjidic.Character) string {
