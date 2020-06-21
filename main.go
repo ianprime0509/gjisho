@@ -1,4 +1,4 @@
-//go:generate go-bindata data/
+//go:generate go run github.com/go-bindata/go-bindata/go-bindata data/
 
 // Package main contains the main code for GJisho.
 package main
