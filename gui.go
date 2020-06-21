@@ -166,9 +166,16 @@ func LaunchGUI(args []string) {
 }
 
 func onActivate(app *gtk.Application) {
-	builder, err := gtk.BuilderNewFromFile("gjisho.glade")
+	builderData, err := Asset("data/gjisho.glade")
+	if err != nil {
+		log.Fatalf("Could not load GUI builder data: %v", err)
+	}
+	builder, err := gtk.BuilderNew()
 	if err != nil {
 		log.Fatalf("Could not create application builder: %v", err)
+	}
+	if err := builder.AddFromString(string(builderData)); err != nil {
+		log.Fatalf("Could not load data for application builder: %v", err)
 	}
 	windowObj, err := builder.GetObject("appWindow")
 	if err != nil {

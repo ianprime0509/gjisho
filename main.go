@@ -1,3 +1,6 @@
+//go:generate go-bindata data/
+
+// Package main contains the main code for GJisho.
 package main
 
 import (
