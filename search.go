@@ -52,7 +52,13 @@ func (s *Search) Toggle() {
 func (s *Search) Activate() {
 	s.toggle.SetActive(true)
 	s.revealer.SetRevealChild(true)
-	s.entry.GrabFocus()
+	// If we grab focus immediately, then if this is the first time the search
+	// entry is being opened, we'll get "gtk_widget_event: assertion
+	// 'WIDGET_REALIZED_FOR_EVENT (widget, event)' failed", which seems to imply
+	// that the focus is being grabbed before the widget actually exists (even
+	// though it works fine anyways). To get rid of the message, we just wait
+	// until the next opportunity to grab the focus.
+	glib.IdleAdd(s.entry.GrabFocus)
 }
 
 // Deactivate deactivates the search entry.
