@@ -4,5 +4,4 @@
 *~
 *.sqlite
 *.sqlite-journal
-bindata.go
 gjisho
