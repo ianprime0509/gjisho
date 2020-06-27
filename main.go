@@ -7,6 +7,7 @@ import (
 	"flag"
 	"log"
 
+	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
@@ -30,7 +31,7 @@ func main() {
 }
 
 func convert(args []string) {
-	db, err := openDB()
+	db, err := util.OpenDB()
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}

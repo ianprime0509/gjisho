@@ -8,6 +8,7 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
+	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 )
 
@@ -95,7 +96,7 @@ func (lst *SearchResultList) Selected() *jmdict.LookupResult {
 // Set sets the currently displayed search results.
 func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
 	lst.results = results
-	removeChildren(&lst.list.Container)
+	util.RemoveChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.ShowMore()
 }

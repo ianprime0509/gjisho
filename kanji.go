@@ -10,6 +10,7 @@ import (
 	"github.com/gotk3/gotk3/cairo"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
 )
@@ -53,7 +54,7 @@ func (kd *KanjiDetails) display(c kanjidic.Character, k kanjivg.Kanji) {
 	kd.charLabel.SetText(c.Literal)
 	kd.drawStrokes(k)
 	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-	removeChildren(&kd.readingMeanings.Container)
+	util.RemoveChildren(&kd.readingMeanings.Container)
 	for _, rm := range c.ReadingMeaningGroups {
 		kd.readingMeanings.Add(newReadingMeaningLabel(rm))
 	}
@@ -93,7 +94,7 @@ func (kd *KanjiDetails) drawStrokes(kanji kanjivg.Kanji) {
 		return da
 	}
 
-	removeChildren(&kd.strokeOrder.Container)
+	util.RemoveChildren(&kd.strokeOrder.Container)
 	for i := range kanji.Strokes {
 		kd.strokeOrder.Add(drawTo(i))
 	}

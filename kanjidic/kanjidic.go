@@ -5,14 +5,13 @@ package kanjidic
 import (
 	"bufio"
 	"database/sql"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	"github.com/ianprime0509/gjisho/xmlutil"
+	"github.com/ianprime0509/gjisho/internal/util"
 )
 
 // Kanjidic is the Kanjidic2 database, containing data on kanji.
@@ -33,7 +32,7 @@ func New(db *sql.DB) (*Kanjidic, error) {
 // ConvertInto converts the Kanjidic2 data from XML into the given database.
 func ConvertInto(xmlPath string, db *sql.DB) error {
 	log.Print("Converting Kanjidic2 to database")
-	entities, err := xmlutil.ParseEntities(xmlPath)
+	entities, err := util.ParseEntities(xmlPath)
 	if err != nil {
 		return fmt.Errorf("could not parse XML entities: %v", err)
 	}
@@ -104,7 +103,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insert *sql.Stm
 	if err := decoder.DecodeElement(&entry, start); err != nil {
 		return fmt.Errorf("could not unmarshal kanji XML: %v", err)
 	}
-	data, err := json.Marshal(entry)
+	data, err := util.MarshalCompressed(entry)
 	if err != nil {
 		return fmt.Errorf("could not marshal kanji JSON: %v", err)
 	}
@@ -124,7 +123,7 @@ func (dict *Kanjidic) Fetch(kanji string) (Character, error) {
 	}
 
 	var char Character
-	if err := json.Unmarshal(data, &char); err != nil {
+	if err := util.UnmarshalCompressed(data, &char); err != nil {
 		return Character{}, fmt.Errorf("could not unmarshal data: %v", err)
 	}
 

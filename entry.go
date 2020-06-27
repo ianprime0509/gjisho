@@ -9,6 +9,7 @@ import (
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/tatoeba"
@@ -309,7 +310,7 @@ func (lst *KanjiList) FetchAndDisplay(ctx context.Context, kanji []string) {
 }
 
 func (lst *KanjiList) display(kanji []kanjidic.Character) {
-	removeChildren(&lst.list.Container)
+	util.RemoveChildren(&lst.list.Container)
 	lst.kanji = kanji
 	for _, result := range lst.kanji {
 		lst.list.Add(newKanjiListRow(result))
@@ -382,7 +383,7 @@ func (lst *ExampleList) ShowMore() {
 }
 
 func (lst *ExampleList) display(examples []tatoeba.Example) {
-	removeChildren(&lst.list.Container)
+	util.RemoveChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.examples = examples
 	lst.ShowMore()

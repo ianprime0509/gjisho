@@ -5,7 +5,6 @@ package kanjivg
 import (
 	"bufio"
 	"database/sql"
-	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -15,6 +14,8 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+
+	"github.com/ianprime0509/gjisho/internal/util"
 )
 
 // KanjiVG is the KanjiVG database, containing data on kanji stroke order and
@@ -103,7 +104,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insert *sql.Stm
 	if err != nil {
 		return err
 	}
-	data, err := json.Marshal(kanji)
+	data, err := util.MarshalCompressed(kanji)
 	if err != nil {
 		return fmt.Errorf("could not marshal stroke order JSON: %v", err)
 	}
@@ -164,7 +165,7 @@ func (kvg *KanjiVG) Fetch(kanji string) (Kanji, error) {
 	}
 
 	var character Kanji
-	if err := json.Unmarshal(data, &character); err != nil {
+	if err := util.UnmarshalCompressed(data, &character); err != nil {
 		return Kanji{}, fmt.Errorf("could not unmarshal data: %v", err)
 	}
 

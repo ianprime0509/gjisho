@@ -4,7 +4,6 @@ package jmdict
 import (
 	"bufio"
 	"database/sql"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -14,7 +13,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/ianprime0509/gjisho/xmlutil"
+	"github.com/ianprime0509/gjisho/internal/util"
 )
 
 // JMdict is the JMdict database, containing data on Japanese words and phrases.
@@ -41,7 +40,7 @@ func New(db *sql.DB) (*JMdict, error) {
 // ConvertInto converts the JMdict data from XML into the given database.
 func ConvertInto(xmlPath string, db *sql.DB) error {
 	log.Print("Converting JMdict to database")
-	entities, err := xmlutil.ParseEntities(xmlPath)
+	entities, err := util.ParseEntities(xmlPath)
 	if err != nil {
 		return fmt.Errorf("could not parse XML entities: %v", err)
 	}
@@ -130,7 +129,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry *sq
 	if err := decoder.DecodeElement(&entry, start); err != nil {
 		return fmt.Errorf("could not unmarshal entry XML: %v", err)
 	}
-	data, err := json.Marshal(&entry)
+	data, err := util.MarshalCompressed(&entry)
 	if err != nil {
 		return fmt.Errorf("could not marshal entry JSON: %v", err)
 	}
@@ -157,7 +156,7 @@ func (dict *JMdict) Fetch(id int) (Entry, error) {
 	}
 
 	var entry Entry
-	if err := json.Unmarshal(data, &entry); err != nil {
+	if err := util.UnmarshalCompressed(data, &entry); err != nil {
 		return Entry{}, fmt.Errorf("could not unmarshal data: %v", err)
 	}
 
