@@ -4,7 +4,6 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"log"
 
@@ -31,7 +30,7 @@ func main() {
 }
 
 func convert(args []string) {
-	db, err := sql.Open("sqlite3", "gjisho.sqlite")
+	db, err := openDB()
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
