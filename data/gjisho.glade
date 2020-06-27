@@ -313,6 +313,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
+                                        <property name="margin_start">5</property>
                                         <property name="label" translatable="yes">Kanji writings</property>
                                         <property name="xalign">0</property>
                                         <attributes>
@@ -330,6 +331,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       <object class="GtkLabel" id="kanjiWritingsLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
+                                        <property name="margin_start">5</property>
                                         <property name="wrap">True</property>
                                         <property name="xalign">0</property>
                                         <attributes>
@@ -346,6 +348,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
+                                        <property name="margin_start">5</property>
                                         <property name="margin_top">5</property>
                                         <property name="label" translatable="yes">Kana writings</property>
                                         <property name="xalign">0</property>
@@ -364,6 +367,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                       <object class="GtkLabel" id="kanaWritingsLabel">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
+                                        <property name="margin_start">5</property>
                                         <property name="wrap">True</property>
                                         <property name="xalign">0</property>
                                         <attributes>
