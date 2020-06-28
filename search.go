@@ -114,11 +114,18 @@ func (lst *SearchResultList) ShowMore() {
 func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 
+	headingBox, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 	heading, _ := gtk.LabelNew(fmt.Sprintf(`<big>%s</big>`, entry.Heading))
 	heading.SetUseMarkup(true)
 	heading.SetXAlign(0)
 	heading.SetEllipsize(pango.ELLIPSIZE_END)
-	box.Add(heading)
+	headingBox.Add(heading)
+	if entry.Priority > 0 {
+		commonLabel, _ := gtk.LabelNew(" <small><i>common</i></small>")
+		commonLabel.SetUseMarkup(true)
+		headingBox.PackEnd(commonLabel, false, false, 0)
+	}
+	box.Add(headingBox)
 	if entry.Heading != entry.PrimaryReading {
 		reading, _ := gtk.LabelNew(entry.PrimaryReading)
 		reading.SetXAlign(0)
