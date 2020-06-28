@@ -178,6 +178,46 @@ type Example struct {
 	Indices  []Index
 }
 
+// Segments returns a slice of all the segments in the example.
+func (ex Example) Segments() []Segment {
+	text := ex.Japanese
+	var segs []Segment
+	for _, idx := range ex.Indices {
+		form := idx.SentenceForm
+		if form == "" {
+			form = idx.Word
+		}
+
+		start := strings.Index(text, form)
+		if start < 0 {
+			continue
+		}
+		if start > 0 {
+			segs = append(segs, Segment{Text: text[:start]})
+		}
+		segs = append(segs, Segment{Text: form, Index: &idx})
+		text = text[start+len(form):]
+	}
+	if text != "" {
+		segs = append(segs, Segment{Text: text})
+	}
+	return segs
+}
+
+// UniqueIndices returns the indices of the example, removing duplicate entries
+// that appear later in the list.
+func (ex Example) UniqueIndices() []Index {
+	var indices []Index
+	seen := make(map[string]struct{})
+	for _, idx := range ex.Indices {
+		if _, ok := seen[idx.Word]; !ok {
+			indices = append(indices, idx)
+			seen[idx.Word] = struct{}{}
+		}
+	}
+	return indices
+}
+
 var aLineRegexp = regexp.MustCompile(`^A: (.*?)\t(.*?)#ID=([0-9_]+)$`)
 var bLineRegexp = regexp.MustCompile(`^B: (.*)$`)
 
@@ -236,6 +276,13 @@ func (ex Example) relevance(word string) int {
 	return 0
 }
 
+// Segment is a segment of Japanese example text which may be associated
+// with an Index.
+type Segment struct {
+	Text  string
+	Index *Index
+}
+
 // Index is an index for an example sentence, giving details on a word used in
 // the sentence.
 type Index struct {
@@ -246,7 +293,7 @@ type Index struct {
 	Good           bool   // whether this sentence is considered a "good example" of the word
 }
 
-var indexRegexp = regexp.MustCompile(`^([^[{(]*)(?:\(([^)]*)\))?(?:\[([^\]]*)\])?(?:\{([^}]*)\})?(~)?`)
+var indexRegexp = regexp.MustCompile(`^([^[{(~]*)(?:\(([^)]*)\))?(?:\[([^\]]*)\])?(?:\{([^}]*)\})?(~)?`)
 
 func parseIndex(raw string) (Index, error) {
 	parts := indexRegexp.FindStringSubmatch(raw)

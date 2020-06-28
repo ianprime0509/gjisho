@@ -13,6 +13,7 @@ func TestParseIndex(t *testing.T) {
 		{"出来る[01]{できない}~", Index{Word: "出来る", Sense: "01", SentenceForm: "できない", Good: true}},
 		{"申し訳ございません[01]", Index{Word: "申し訳ございません", Sense: "01"}},
 		{"口(くち)[05]", Index{Word: "口", Disambiguation: "くち", Sense: "05"}},
+		{"太陽熱~", Index{Word: "太陽熱", Good: true}},
 	}
 
 	for _, test := range tests {

@@ -26,6 +26,7 @@ var search = &Search{results: searchResults}
 var kanjiList = new(KanjiList)
 var kanjiDetails = new(KanjiDetails)
 var exampleList = new(ExampleList)
+var exampleDetails = new(ExampleDetails)
 var entryDisplay = &EntryDisplay{kanjiList: kanjiList, exampleList: exampleList}
 var navigation = &EntryNavigation{disp: entryDisplay}
 
@@ -33,6 +34,10 @@ var appComponents = map[string]interface{}{
 	"aboutDialog":                 &aboutDialog,
 	"backButton":                  &navigation.backButton,
 	"entryDetailsLabel":           &entryDisplay.detailsLabel,
+	"exampleDetailsEnglishLabel":  &exampleDetails.englishLabel,
+	"exampleDetailsJapaneseLabel": &exampleDetails.japaneseLabel,
+	"exampleDetailsWindow":        &exampleDetails.window,
+	"exampleDetailsWordsList":     &exampleDetails.wordsList,
 	"examplesList":                &exampleList.list,
 	"forwardButton":               &navigation.forwardButton,
 	"kanjiDetailsCharacterLabel":  &kanjiDetails.charLabel,
@@ -63,10 +68,17 @@ var signals = map[string]interface{}{
 		}
 		return navigation.FollowLink(url)
 	},
+	"exampleDetailsWordActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
+		navigation.GoTo(exampleDetails.words[row.GetIndex()].ID)
+		exampleDetails.Close()
+	},
 	"examplesEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
 		if pos == gtk.POS_BOTTOM {
 			exampleList.ShowMore()
 		}
+	},
+	"exampleListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
+		exampleDetails.FetchAndDisplay(exampleList.examples[row.GetIndex()])
 	},
 	"hideWidget":  func(w interface{ Hide() }) { w.Hide() },
 	"inhibitNext": func() bool { return true },

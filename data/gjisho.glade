@@ -443,6 +443,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="selection_mode">none</property>
+                                    <signal name="row-activated" handler="exampleListRowActivated" swapped="no"/>
                                     <child type="placeholder">
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
@@ -641,6 +642,90 @@ Author: Ian Johnson <ianprime0509@gmail.com>
         </child>
         <child>
           <placeholder/>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </object>
+  <object class="GtkWindow" id="exampleDetailsWindow">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Example details</property>
+    <property name="modal">True</property>
+    <property name="default_width">600</property>
+    <property name="default_height">600</property>
+    <property name="transient_for">appWindow</property>
+    <signal name="delete-event" handler="hideWidget" swapped="no"/>
+    <signal name="delete-event" handler="inhibitNext" swapped="no"/>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">15</property>
+        <child>
+          <object class="GtkLabel" id="exampleDetailsJapaneseLabel">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin_start">5</property>
+            <property name="margin_end">5</property>
+            <property name="wrap">True</property>
+            <property name="xalign">0</property>
+            <attributes>
+              <attribute name="scale" value="1.728"/>
+            </attributes>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="exampleDetailsEnglishLabel">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin_start">5</property>
+            <property name="margin_end">5</property>
+            <property name="wrap">True</property>
+            <property name="xalign">0</property>
+            <attributes>
+              <attribute name="scale" value="1.4399999999999999"/>
+            </attributes>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="hscrollbar_policy">never</property>
+            <child>
+              <object class="GtkViewport">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="shadow_type">none</property>
+                <child>
+                  <object class="GtkListBox" id="exampleDetailsWordsList">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="selection_mode">none</property>
+                    <signal name="row-activated" handler="exampleDetailsWordActivated" swapped="no"/>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
         </child>
       </object>
     </child>

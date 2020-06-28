@@ -105,13 +105,13 @@ func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
 func (lst *SearchResultList) ShowMore() {
 	maxIndex := lst.nDisplayed + 50
 	for ; lst.nDisplayed < len(lst.results) && lst.nDisplayed < maxIndex; lst.nDisplayed++ {
-		lst.list.Add(newSearchResult(lst.results[lst.nDisplayed]))
+		lst.list.Add(NewSearchResult(lst.results[lst.nDisplayed]))
 	}
 	lst.list.ShowAll()
 }
 
-// newSearchResult creates a search result widget for display.
-func newSearchResult(entry jmdict.LookupResult) gtk.IWidget {
+// NewSearchResult creates a search result widget for display.
+func NewSearchResult(entry jmdict.LookupResult) *gtk.Box {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 
 	headingBox, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
