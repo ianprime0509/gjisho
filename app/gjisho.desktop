@@ -3,6 +3,5 @@ Type=Application
 Version=1.0
 Name=GJisho
 Comment=Japanese-English dictionary for GNOME
-Path=/opt/gjisho
-Exec=/opt/gjisho/gjisho
+Exec=/usr/local/bin/gjisho
 Categories=Education;Dictionary
