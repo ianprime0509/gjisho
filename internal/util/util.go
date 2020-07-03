@@ -110,10 +110,7 @@ func OpenDB() (*sql.DB, error) {
 		}
 	}
 
-	// Not found; need to try creating the data directory
-	dir := filepath.Join(dataHome, "gjisho")
-	os.MkdirAll(dir, 0o755)
-	return sql.Open("sqlite3", filepath.Join(dir, "gjisho.sqlite"))
+	return nil, fmt.Errorf("database file not found in lookup path %v", lookupDirs)
 }
 
 // RemoveChildren removes all children from the given container.

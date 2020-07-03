@@ -4,10 +4,10 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 
-	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
@@ -15,7 +15,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var convertMode = flag.Bool("conv", false, "convert the given database")
+var convertPath = flag.String("conv", "", "convert the given database")
 var jmdictPath = flag.String("jmdict", "", "path to the JMdict XML file")
 var kanjidicPath = flag.String("kanjidic", "", "path to the Kanjidic2 XML file")
 var tatoebaPath = flag.String("tatoeba", "", "path to the Tatoeba text file")
@@ -23,15 +23,15 @@ var kanjiVGPath = flag.String("kanjivg", "", "path to the KanjiVG XML file")
 
 func main() {
 	flag.Parse()
-	if *convertMode {
-		convert(flag.Args())
+	if *convertPath != "" {
+		convert()
 	} else {
 		LaunchGUI(flag.Args())
 	}
 }
 
-func convert(args []string) {
-	db, err := util.OpenDB()
+func convert() {
+	db, err := sql.Open("sqlite3", *convertPath)
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
