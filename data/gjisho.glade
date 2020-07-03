@@ -314,7 +314,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="margin_start">5</property>
-                                        <property name="label" translatable="yes">Kanji writings</property>
+                                        <property name="label" translatable="yes">Kanji</property>
                                         <property name="xalign">0</property>
                                         <attributes>
                                           <attribute name="weight" value="bold"/>
@@ -350,7 +350,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="can_focus">False</property>
                                         <property name="margin_start">5</property>
                                         <property name="margin_top">5</property>
-                                        <property name="label" translatable="yes">Kana writings</property>
+                                        <property name="label" translatable="yes">Kana</property>
                                         <property name="xalign">0</property>
                                         <attributes>
                                           <attribute name="weight" value="bold"/>
@@ -491,6 +491,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Back</property>
                     <signal name="clicked" handler="navigateBack" swapped="no"/>
                     <child>
                       <object class="GtkImage">
@@ -510,6 +511,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Forward</property>
                     <signal name="clicked" handler="navigateForward" swapped="no"/>
                     <child>
                       <object class="GtkImage">
@@ -528,6 +530,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">More details</property>
                     <signal name="toggled" handler="moreInfoToggle" swapped="no"/>
                     <child>
                       <object class="GtkImage">
@@ -569,6 +572,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
+            <property name="tooltip_text" translatable="yes">Search</property>
             <signal name="toggled" handler="searchToggle" swapped="no"/>
             <child>
               <object class="GtkImage">
@@ -585,6 +589,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
             <property name="can_focus">True</property>
             <property name="focus_on_click">False</property>
             <property name="receives_default">True</property>
+            <property name="tooltip_text" translatable="yes">Settings</property>
             <property name="popover">mainMenu</property>
             <child>
               <object class="GtkImage">
