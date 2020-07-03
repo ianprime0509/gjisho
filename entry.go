@@ -113,14 +113,16 @@ func (n *EntryNavigation) updateSensitivity() {
 
 // EntryDisplay is the main display area for a dictionary entry.
 type EntryDisplay struct {
-	kanjiList          *KanjiList
-	exampleList        *ExampleList
-	primaryKanaLabel   *gtk.Label
-	primaryKanjiLabel  *gtk.Label
-	detailsLabel       *gtk.Label
-	kanjiWritingsLabel *gtk.Label
-	kanaWritingsLabel  *gtk.Label
-	cancelDisplay      context.CancelFunc
+	scrolledWindow         *gtk.ScrolledWindow
+	primaryKanaLabel       *gtk.Label
+	primaryKanjiLabel      *gtk.Label
+	detailsLabel           *gtk.Label
+	writingsScrolledWindow *gtk.ScrolledWindow
+	kanjiWritingsLabel     *gtk.Label
+	kanaWritingsLabel      *gtk.Label
+	kanjiList              *KanjiList
+	exampleList            *ExampleList
+	cancelDisplay          context.CancelFunc
 }
 
 // FetchAndDisplay fetches and displays the dictionary entry with the given ID
@@ -160,6 +162,8 @@ func (disp *EntryDisplay) display(entry jmdict.Entry) {
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
 	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiWritings))
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
+	util.ScrollToTop(disp.writingsScrolledWindow)
+	util.ScrollToTop(disp.scrolledWindow)
 }
 
 func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
@@ -279,8 +283,9 @@ func fmtEntryRef(entry string) string {
 
 // KanjiList is an overview list of kanji associated with an entry.
 type KanjiList struct {
-	list  *gtk.ListBox
-	kanji []kanjidic.Character
+	scrolledWindow *gtk.ScrolledWindow
+	list           *gtk.ListBox
+	kanji          []kanjidic.Character
 }
 
 // FetchAndDisplay fetches and displays information about the given kanji in the
@@ -316,6 +321,7 @@ func (lst *KanjiList) display(kanji []kanjidic.Character) {
 		lst.list.Add(newKanjiListRow(result))
 	}
 	lst.list.ShowAll()
+	util.ScrollToTop(lst.scrolledWindow)
 }
 
 func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
@@ -347,9 +353,10 @@ func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
 
 // ExampleList is a list of examples associated with an entry.
 type ExampleList struct {
-	list       *gtk.ListBox
-	examples   []tatoeba.Example
-	nDisplayed int
+	scrolledWindow *gtk.ScrolledWindow
+	list           *gtk.ListBox
+	examples       []tatoeba.Example
+	nDisplayed     int
 }
 
 // FetchAndDisplay fetches and displays examples for the given word in the list.
@@ -387,6 +394,7 @@ func (lst *ExampleList) display(examples []tatoeba.Example) {
 	lst.nDisplayed = 0
 	lst.examples = examples
 	lst.ShowMore()
+	util.ScrollToTop(lst.scrolledWindow)
 }
 
 func newExampleListRow(ex tatoeba.Example) *gtk.ListBoxRow {

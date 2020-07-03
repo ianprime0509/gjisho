@@ -79,9 +79,10 @@ func (s *Search) startSearch() context.Context {
 
 // SearchResultList is a list of search results displayed in the GUI.
 type SearchResultList struct {
-	list       *gtk.ListBox
-	results    []jmdict.LookupResult
-	nDisplayed int
+	list           *gtk.ListBox
+	scrolledWindow *gtk.ScrolledWindow
+	results        []jmdict.LookupResult
+	nDisplayed     int
 }
 
 // Selected returns the currently selected search result, or nil if none is
@@ -99,6 +100,7 @@ func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
 	util.RemoveChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.ShowMore()
+	util.ScrollToTop(lst.scrolledWindow)
 }
 
 // ShowMore displays more search results in the list.

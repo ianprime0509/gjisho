@@ -18,6 +18,7 @@ import (
 // KanjiDetails is a modal window showing additional details about a kanji.
 type KanjiDetails struct {
 	window          *gtk.Window
+	scrolledWindow  *gtk.ScrolledWindow
 	strokeOrder     *gtk.Box
 	charLabel       *gtk.Label
 	subtitleLabel   *gtk.Label
@@ -61,6 +62,7 @@ func (kd *KanjiDetails) display(c kanjidic.Character, k kanjivg.Kanji) {
 	kd.readingMeanings.ShowAll()
 	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
 	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
+	util.ScrollToTop(kd.scrolledWindow)
 	kd.window.Present()
 }
 

@@ -17,6 +17,7 @@ type ExampleDetails struct {
 	window         *gtk.Window
 	japaneseLabel  *gtk.Label
 	englishLabel   *gtk.Label
+	scrolledWindow *gtk.ScrolledWindow
 	words          []jmdict.LookupResult
 	wordsList      *gtk.ListBox
 	cancelPrevious context.CancelFunc
@@ -95,6 +96,7 @@ func (ed *ExampleDetails) display(ex tatoeba.Example, words []jmdict.LookupResul
 		ed.wordsList.Add(NewSearchResult(w))
 	}
 	ed.wordsList.ShowAll()
+	util.ScrollToTop(ed.scrolledWindow)
 
 	ed.window.Present()
 }

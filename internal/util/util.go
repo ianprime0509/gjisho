@@ -117,8 +117,13 @@ func OpenDB() (*sql.DB, error) {
 }
 
 // RemoveChildren removes all children from the given container.
-func RemoveChildren(lst *gtk.Container) {
-	lst.GetChildren().Foreach(func(item interface{}) {
-		lst.Remove(item.(gtk.IWidget))
+func RemoveChildren(c *gtk.Container) {
+	c.GetChildren().Foreach(func(item interface{}) {
+		c.Remove(item.(gtk.IWidget))
 	})
+}
+
+// ScrollToTop scrolls the given scrolled window to the top.
+func ScrollToTop(w *gtk.ScrolledWindow) {
+	w.GetVAdjustment().SetValue(w.GetVAdjustment().GetLower())
 }
