@@ -1,3 +1,20 @@
+GJisho uses the JMdict
+(http://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project) and
+Kanjidic (http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) dictionary
+files. These files are the property of the Electronic Dictionary Research and
+Development Group (http://www.edrdg.org/), and are used in conformance with the
+Group's license (http://www.edrdg.org/edrdg/licence.html).
+
+Example sentence data comes from the Tatoeba project (https://tatoeba.org) and
+is licensed under the CC-BY 2.0 FR license
+(https://creativecommons.org/licenses/by/2.0/fr/deed.en_GB).
+
+Kanji stroke order data comes from the KanjiVG project
+(https://github.com/KanjiVG/kanjivg), copyright Ulrich Apel, and is licensed
+under the CC-BY-SA 3.0 license (http://creativecommons.org/licenses/by-sa/3.0/).
+
+GJisho itself is licensed under the MIT license, as follows:
+
 Copyright 2020 Ian Johnson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
