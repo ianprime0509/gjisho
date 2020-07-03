@@ -38,7 +38,7 @@ fetch:
 
 install: gjisho gjisho.sqlite app/gjisho.desktop
 	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp gjisho ${DESTDIR}${PREFIX}/bin/gjisho
+	cp gjisho ${DESTDIR}${PREFIX}/bin
 	mkdir -p ${DESTDIR}${PREFIX}/share/gjisho
 	cp gjisho.sqlite ${DESTDIR}${PREFIX}/share/gjisho
 	mkdir -p ${DESTDIR}${PREFIX}/share/applications
