@@ -96,7 +96,7 @@ func (ed *ExampleDetails) display(ex tatoeba.Example, words []jmdict.LookupResul
 		ed.wordsList.Add(NewSearchResult(w))
 	}
 	ed.wordsList.ShowAll()
-	util.ScrollToTop(ed.scrolledWindow)
+	util.ScrollToStart(ed.scrolledWindow)
 
 	ed.window.Present()
 }

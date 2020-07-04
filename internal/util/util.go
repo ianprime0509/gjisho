@@ -120,7 +120,9 @@ func RemoveChildren(c *gtk.Container) {
 	})
 }
 
-// ScrollToTop scrolls the given scrolled window to the top.
-func ScrollToTop(w *gtk.ScrolledWindow) {
+// ScrollToStart scrolls the given scrolled window vertically to the top and
+// horizontally to the start.
+func ScrollToStart(w *gtk.ScrolledWindow) {
 	w.GetVAdjustment().SetValue(w.GetVAdjustment().GetLower())
+	w.GetHAdjustment().SetValue(w.GetHAdjustment().GetLower())
 }

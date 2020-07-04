@@ -782,7 +782,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <signal name="delete-event" handler="hideWidget" swapped="no"/>
     <signal name="delete-event" handler="inhibitNext" swapped="no"/>
     <child>
-      <object class="GtkScrolledWindow">
+      <object class="GtkScrolledWindow" id="kanjiDetailsScrolledWindow">
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="hscrollbar_policy">never</property>
@@ -812,7 +812,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkScrolledWindow" id="kanjiDetailsScrolledWindow">
+                  <object class="GtkScrolledWindow" id="strokeOrderScrolledWindow">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="vscrollbar_policy">never</property>

@@ -162,8 +162,8 @@ func (disp *EntryDisplay) display(entry jmdict.Entry) {
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
 	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiWritings))
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
-	util.ScrollToTop(disp.writingsScrolledWindow)
-	util.ScrollToTop(disp.scrolledWindow)
+	util.ScrollToStart(disp.writingsScrolledWindow)
+	util.ScrollToStart(disp.scrolledWindow)
 }
 
 func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
@@ -321,7 +321,7 @@ func (lst *KanjiList) display(kanji []kanjidic.Character) {
 		lst.list.Add(newKanjiListRow(result))
 	}
 	lst.list.ShowAll()
-	util.ScrollToTop(lst.scrolledWindow)
+	util.ScrollToStart(lst.scrolledWindow)
 }
 
 func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
@@ -394,7 +394,7 @@ func (lst *ExampleList) display(examples []tatoeba.Example) {
 	lst.nDisplayed = 0
 	lst.examples = examples
 	lst.ShowMore()
-	util.ScrollToTop(lst.scrolledWindow)
+	util.ScrollToStart(lst.scrolledWindow)
 }
 
 func newExampleListRow(ex tatoeba.Example) *gtk.ListBoxRow {

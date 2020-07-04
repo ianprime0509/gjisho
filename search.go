@@ -100,7 +100,7 @@ func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
 	util.RemoveChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.ShowMore()
-	util.ScrollToTop(lst.scrolledWindow)
+	util.ScrollToStart(lst.scrolledWindow)
 }
 
 // ShowMore displays more search results in the list.

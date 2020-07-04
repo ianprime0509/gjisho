@@ -63,6 +63,7 @@ var appComponents = map[string]interface{}{
 	"searchResults":                &searchResults.list,
 	"searchResultsScrolledWindow":  &searchResults.scrolledWindow,
 	"searchToggleButton":           &search.toggle,
+	"strokeOrderScrolledWindow":    &kanjiDetails.strokeOrderScrolledWindow,
 	"writingsScrolledWindow":       &entryDisplay.writingsScrolledWindow,
 }
 
