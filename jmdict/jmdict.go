@@ -94,6 +94,9 @@ func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 		return fmt.Errorf("could not commit transaction: %v", err)
 	}
 
+	if _, err := db.Exec("INSERT INTO EntryLookup(EntryLookup) VALUES ('optimize')"); err != nil {
+		return fmt.Errorf("could not optimize full-text search index: %v", err)
+	}
 	if _, err := db.Exec("ANALYZE"); err != nil {
 		return fmt.Errorf("could not analyze database: %v", err)
 	}
