@@ -43,11 +43,11 @@ install-database: gjisho.sqlite
 	mkdir -p '${DESTDIR}${PREFIX}/share/gjisho'
 	cp gjisho.sqlite '${DESTDIR}${PREFIX}/share/gjisho'
 
-install-program: gjisho app/gjisho.desktop
+install-program: gjisho gjisho.desktop
 	mkdir -p '${DESTDIR}${PREFIX}/bin'
 	cp gjisho '${DESTDIR}${PREFIX}/bin'
 	mkdir -p '${DESTDIR}${PREFIX}/share/applications'
-	cp app/gjisho.desktop '${DESTDIR}${PREFIX}/share/applications'
+	cp gjisho.desktop '${DESTDIR}${PREFIX}/share/applications'
 
 bindata.go: data/gjisho.glade
 	${GO} generate
