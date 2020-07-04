@@ -1,9 +1,11 @@
 GJisho uses the JMdict
 (http://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project) and
-Kanjidic (http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) dictionary
-files. These files are the property of the Electronic Dictionary Research and
-Development Group (http://www.edrdg.org/), and are used in conformance with the
-Group's license (http://www.edrdg.org/edrdg/licence.html).
+KANJIDIC (http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) dictionary files
+and the KRADFILE kanji decomposition file
+(https://www.edrdg.org/krad/kradinf.html). These files are the property of the
+Electronic Dictionary Research and Development Group (http://www.edrdg.org/),
+and are used in conformance with the Group's license
+(http://www.edrdg.org/edrdg/licence.html).
 
 Example sentence data comes from the Tatoeba project (https://tatoeba.org) and
 is licensed under the CC-BY 2.0 FR license

@@ -38,7 +38,7 @@ func (kd *KanjiDetails) FetchAndDisplay(c kanjidic.Character) {
 		if k, err := strokeDict.Fetch(c.Literal); err == nil {
 			ch <- k
 		} else {
-			log.Printf("Could not fetch kanji stroke information: %v", err)
+			log.Printf("Could not fetch kanji stroke information for %q: %v", c.Literal, err)
 		}
 		close(ch)
 	}()

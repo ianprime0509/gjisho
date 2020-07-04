@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
+	"unicode/utf8"
+	"unsafe"
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
 	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
+	"github.com/ianprime0509/gjisho/kradfile"
 )
 
 // Search is a wrapper around the search-related components of the app.
@@ -17,6 +21,7 @@ type Search struct {
 	toggle         *gtk.ToggleButton
 	revealer       *gtk.Revealer
 	entry          *gtk.SearchEntry
+	kanjiInput     *KanjiInput
 	results        *SearchResultList
 	cancelPrevious context.CancelFunc // a function to cancel the previous search
 }
@@ -66,6 +71,16 @@ func (s *Search) Activate() {
 func (s *Search) Deactivate() {
 	s.toggle.SetActive(false)
 	s.revealer.SetRevealChild(false)
+}
+
+// InsertEntryText inserts text in the search entry buffer at the current
+// position.
+func (s *Search) InsertEntryText(text string) {
+	old, _ := search.entry.GetText()
+	rs := []rune(old)
+	pos := search.entry.GetPosition()
+	search.entry.SetText(string(rs[:pos]) + text + string(rs[pos:]))
+	search.entry.SetPosition(pos + utf8.RuneCountInString(text))
 }
 
 func (s *Search) startSearch() context.Context {
@@ -146,4 +161,167 @@ func NewSearchResult(entry jmdict.LookupResult) *gtk.Box {
 	box.Add(gloss)
 
 	return box
+}
+
+// KanjiInput is a special input popover to make it easier to input kanji.
+type KanjiInput struct {
+	button                 *gtk.ToggleButton
+	buttonIcon             *gtk.Image
+	popover                *gtk.Popover
+	radicalsScrolledWindow *gtk.ScrolledWindow
+	radicals               *gtk.Box
+	radicalButtons         map[string]*gtk.FlowBoxChild
+	selectedRadicals       map[string]struct{}
+	resultsScrolledWindow  *gtk.ScrolledWindow
+	results                *gtk.FlowBox
+	resultKanji            []kradfile.Kanji
+}
+
+// InitRadicals initializes the radical input buttons.
+func (ki *KanjiInput) InitRadicals() {
+	ki.radicalButtons = make(map[string]*gtk.FlowBoxChild, len(kradfile.RadicalStrokes))
+	ki.selectedRadicals = make(map[string]struct{})
+
+	rads := make(map[int][]string)
+	for rad, strokes := range kradfile.RadicalStrokes {
+		rads[strokes] = append(rads[strokes], rad)
+	}
+	for _, lst := range rads {
+		sort.Strings(lst)
+	}
+
+	strokes := make([]int, 0, len(rads))
+	for s := range rads {
+		strokes = append(strokes, s)
+	}
+	sort.Ints(strokes)
+
+	for _, s := range strokes {
+		var heading string
+		if s == 1 {
+			heading = "1 stroke"
+		} else {
+			heading = fmt.Sprintf("%v strokes", s)
+		}
+		lbl, _ := gtk.LabelNew(heading)
+		ki.radicals.Add(lbl)
+
+		fb, _ := gtk.FlowBoxNew()
+		fb.SetMinChildrenPerLine(10)
+		fb.SetMaxChildrenPerLine(10)
+		fb.SetSelectionMode(gtk.SELECTION_NONE)
+		for _, rad := range rads[s] {
+			rad := rad
+			lbl, _ := gtk.LabelNew(kanjiLabelMarkup(rad, false))
+			lbl.SetUseMarkup(true)
+			b, _ := gtk.FlowBoxChildNew()
+			b.Add(lbl)
+			ki.radicalButtons[rad] = b
+			fb.Add(b)
+			// Why can't I just use the activate signal on b itself? GTK is so
+			// stupid sometimes.
+			fb.Connect("child-activated", func(_ interface{}, child *gtk.FlowBoxChild) {
+				if child.GetIndex() == b.GetIndex() && b.GetSensitive() {
+					ki.toggleRadical(rad)
+					ki.updateResults()
+				}
+			})
+		}
+		ki.radicals.Add(fb)
+	}
+}
+
+// Display displays the kanji input popover.
+func (ki *KanjiInput) Display() {
+	util.ScrollToStart(ki.radicalsScrolledWindow)
+	util.ScrollToStart(ki.resultsScrolledWindow)
+	for rad := range ki.selectedRadicals {
+		ki.unselectRadical(rad)
+	}
+	for _, b := range ki.radicalButtons {
+		b.SetSensitive(true)
+	}
+	util.RemoveChildren(&ki.results.Container)
+	ki.popover.ShowAll()
+}
+
+func (ki *KanjiInput) selectRadical(rad string) {
+	ki.selectedRadicals[rad] = struct{}{}
+	b := ki.radicalButtons[rad]
+	child, _ := b.GetChild()
+	lbl := (*gtk.Label)(unsafe.Pointer(child))
+	lbl.SetMarkup(kanjiLabelMarkup(rad, true))
+	b.ShowAll()
+}
+
+func (ki *KanjiInput) unselectRadical(rad string) {
+	delete(ki.selectedRadicals, rad)
+	b := ki.radicalButtons[rad]
+	child, _ := b.GetChild()
+	lbl := (*gtk.Label)(unsafe.Pointer(child))
+	lbl.SetMarkup(kanjiLabelMarkup(rad, false))
+	b.ShowAll()
+}
+
+func (ki *KanjiInput) toggleRadical(rad string) {
+	if _, ok := ki.selectedRadicals[rad]; ok {
+		ki.unselectRadical(rad)
+	} else {
+		ki.selectRadical(rad)
+	}
+}
+
+func (ki *KanjiInput) updateResults() {
+	rads := make([]string, 0, len(ki.selectedRadicals))
+	for rad := range ki.selectedRadicals {
+		rads = append(rads, rad)
+	}
+
+	kanji, krads, err := radicalDict.FetchByRadicals(rads)
+	if err != nil {
+		log.Printf("Error fetching kanji by radicals: %v", err)
+		return
+	}
+	ki.setResults(kanji)
+	ki.setSensitivity(krads)
+}
+
+func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
+	util.RemoveChildren(&ki.results.Container)
+	sort.Slice(kanji, func(i, j int) bool {
+		ki := kanji[i]
+		kj := kanji[j]
+		return ki.StrokeCount < kj.StrokeCount ||
+			(ki.StrokeCount == kj.StrokeCount && ki.Literal < kj.Literal)
+	})
+
+	for _, k := range kanji {
+		lbl, _ := gtk.LabelNew(kanjiLabelMarkup(k.Literal, false))
+		lbl.SetUseMarkup(true)
+		b, _ := gtk.FlowBoxChildNew()
+		b.Add(lbl)
+		ki.results.Add(b)
+	}
+	ki.resultKanji = kanji
+	ki.results.ShowAll()
+}
+
+func (ki *KanjiInput) setSensitivity(krads []string) {
+	radSet := make(map[string]struct{}, len(krads))
+	for _, rad := range krads {
+		radSet[rad] = struct{}{}
+	}
+
+	for rad, b := range ki.radicalButtons {
+		_, ok := radSet[rad]
+		b.SetSensitive(ok)
+	}
+}
+
+func kanjiLabelMarkup(k string, selected bool) string {
+	txt := fmt.Sprintf(`<span size="x-large">%v</span>`, k)
+	if selected {
+		txt = "<b>" + txt + "</b>"
+	}
+	return txt
 }

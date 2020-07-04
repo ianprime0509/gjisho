@@ -11,13 +11,15 @@ import (
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
+	"github.com/ianprime0509/gjisho/kradfile"
 	"github.com/ianprime0509/gjisho/tatoeba"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var convertPath = flag.String("conv", "", "convert the given database")
 var jmdictPath = flag.String("jmdict", "", "path to the JMdict XML file")
-var kanjidicPath = flag.String("kanjidic", "", "path to the Kanjidic2 XML file")
+var kanjidicPath = flag.String("kanjidic", "", "path to the KANJIDIC2 XML file")
+var kradfilePath = flag.String("kradfile", "", "path to the KRADFILE text file")
 var tatoebaPath = flag.String("tatoeba", "", "path to the Tatoeba text file")
 var kanjiVGPath = flag.String("kanjivg", "", "path to the KanjiVG XML file")
 
@@ -45,7 +47,12 @@ func convert() {
 	}
 	if *kanjidicPath != "" {
 		if err := kanjidic.ConvertInto(*kanjidicPath, db, progressCB); err != nil {
-			log.Fatalf("Error converting Kanjidic: %v", err)
+			log.Fatalf("Error converting KANJIDIC: %v", err)
+		}
+	}
+	if *kradfilePath != "" {
+		if err := kradfile.ConvertInto(*kradfilePath, db); err != nil {
+			log.Fatalf("Error converting KRADFILE: %v", err)
 		}
 	}
 	if *tatoebaPath != "" {

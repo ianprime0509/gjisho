@@ -22,8 +22,12 @@ These resources can be downloaded manually and placed into the correct locations
 
 - JMDict: <https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project>
   - Download: <http://ftp.monash.edu/pub/nihongo/JMdict.gz>
-- Kanjidic: <https://www.edrdg.org/wiki/index.php/KANJIDIC_Project>
+- KANJIDIC: <https://www.edrdg.org/wiki/index.php/KANJIDIC_Project>
   - Download: <http://www.edrdg.org/kanjidic/kanjidic2.xml.gz>
+- KRADFILE: <https://www.edrdg.org/krad/kradinf.html>
+  - Download: <ftp://ftp.monash.edu/pub/nihongo/kradfile.gz>
+  - Note: this file is encoded in EUC-JP and must be converted to UTF-8 before
+    building the database
 - Tatoeba/Tanaka Corpus: <https://www.edrdg.org/wiki/index.php/Tanaka_Corpus>
   - Download: <ftp://ftp.monash.edu/pub/nihongo/examples.utf.gz>
 - KanjiVG: <https://github.com/KanjiVG/kanjivg>

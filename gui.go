@@ -13,6 +13,7 @@ import (
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
+	"github.com/ianprime0509/gjisho/kradfile"
 	"github.com/ianprime0509/gjisho/tatoeba"
 )
 
@@ -22,7 +23,8 @@ var aboutDialog *gtk.AboutDialog
 var moreInfoRevealer *gtk.Revealer
 
 var searchResults = new(SearchResultList)
-var search = &Search{results: searchResults}
+var kanjiInput = new(KanjiInput)
+var search = &Search{results: searchResults, kanjiInput: kanjiInput}
 var kanjiList = new(KanjiList)
 var kanjiDetails = new(KanjiDetails)
 var exampleList = new(ExampleList)
@@ -31,40 +33,47 @@ var entryDisplay = &EntryDisplay{kanjiList: kanjiList, exampleList: exampleList}
 var navigation = &EntryNavigation{disp: entryDisplay}
 
 var appComponents = map[string]interface{}{
-	"aboutDialog":                  &aboutDialog,
-	"backButton":                   &navigation.backButton,
-	"entryDetailsLabel":            &entryDisplay.detailsLabel,
-	"entryScrolledWindow":          &entryDisplay.scrolledWindow,
-	"exampleDetailsEnglishLabel":   &exampleDetails.englishLabel,
-	"exampleDetailsJapaneseLabel":  &exampleDetails.japaneseLabel,
-	"exampleDetailsScrolledWindow": &exampleDetails.scrolledWindow,
-	"exampleDetailsWindow":         &exampleDetails.window,
-	"exampleDetailsWordsList":      &exampleDetails.wordsList,
-	"examplesList":                 &exampleList.list,
-	"examplesScrolledWindow":       &exampleList.scrolledWindow,
-	"forwardButton":                &navigation.forwardButton,
-	"kanjiDetailsCharacterLabel":   &kanjiDetails.charLabel,
-	"kanjiDetailsDictRefsLabel":    &kanjiDetails.dictRefsLabel,
-	"kanjiDetailsReadingMeanings":  &kanjiDetails.readingMeanings,
-	"kanjiDetailsScrolledWindow":   &kanjiDetails.scrolledWindow,
-	"kanjiDetailsStrokeOrder":      &kanjiDetails.strokeOrder,
-	"kanjiDetailsSubtitleLabel":    &kanjiDetails.subtitleLabel,
-	"kanjiDetailsQueryCodesLabel":  &kanjiDetails.queryCodesLabel,
-	"kanjiDetailsWindow":           &kanjiDetails.window,
-	"kanaWritingsLabel":            &entryDisplay.kanaWritingsLabel,
-	"kanjiList":                    &kanjiList.list,
-	"kanjiScrolledWindow":          &kanjiList.scrolledWindow,
-	"kanjiWritingsLabel":           &entryDisplay.kanjiWritingsLabel,
-	"moreInfoRevealer":             &moreInfoRevealer,
-	"primaryKanaLabel":             &entryDisplay.primaryKanaLabel,
-	"primaryKanjiLabel":            &entryDisplay.primaryKanjiLabel,
-	"searchEntry":                  &search.entry,
-	"searchRevealer":               &search.revealer,
-	"searchResults":                &searchResults.list,
-	"searchResultsScrolledWindow":  &searchResults.scrolledWindow,
-	"searchToggleButton":           &search.toggle,
-	"strokeOrderScrolledWindow":    &kanjiDetails.strokeOrderScrolledWindow,
-	"writingsScrolledWindow":       &entryDisplay.writingsScrolledWindow,
+	"aboutDialog":                      &aboutDialog,
+	"backButton":                       &navigation.backButton,
+	"entryDetailsLabel":                &entryDisplay.detailsLabel,
+	"entryScrolledWindow":              &entryDisplay.scrolledWindow,
+	"exampleDetailsEnglishLabel":       &exampleDetails.englishLabel,
+	"exampleDetailsJapaneseLabel":      &exampleDetails.japaneseLabel,
+	"exampleDetailsScrolledWindow":     &exampleDetails.scrolledWindow,
+	"exampleDetailsWindow":             &exampleDetails.window,
+	"exampleDetailsWordsList":          &exampleDetails.wordsList,
+	"examplesList":                     &exampleList.list,
+	"examplesScrolledWindow":           &exampleList.scrolledWindow,
+	"forwardButton":                    &navigation.forwardButton,
+	"kanjiDetailsCharacterLabel":       &kanjiDetails.charLabel,
+	"kanjiDetailsDictRefsLabel":        &kanjiDetails.dictRefsLabel,
+	"kanjiDetailsReadingMeanings":      &kanjiDetails.readingMeanings,
+	"kanjiDetailsScrolledWindow":       &kanjiDetails.scrolledWindow,
+	"kanjiDetailsStrokeOrder":          &kanjiDetails.strokeOrder,
+	"kanjiDetailsSubtitleLabel":        &kanjiDetails.subtitleLabel,
+	"kanjiDetailsQueryCodesLabel":      &kanjiDetails.queryCodesLabel,
+	"kanjiDetailsWindow":               &kanjiDetails.window,
+	"kanjiInputButton":                 &kanjiInput.button,
+	"kanjiInputButtonIcon":             &kanjiInput.buttonIcon,
+	"kanjiInputPopover":                &kanjiInput.popover,
+	"kanjiInputRadicals":               &kanjiInput.radicals,
+	"kanjiInputRadicalsScrolledWindow": &kanjiInput.radicalsScrolledWindow,
+	"kanjiInputResults":                &kanjiInput.results,
+	"kanjiInputResultsScrolledWindow":  &kanjiInput.resultsScrolledWindow,
+	"kanaWritingsLabel":                &entryDisplay.kanaWritingsLabel,
+	"kanjiList":                        &kanjiList.list,
+	"kanjiScrolledWindow":              &kanjiList.scrolledWindow,
+	"kanjiWritingsLabel":               &entryDisplay.kanjiWritingsLabel,
+	"moreInfoRevealer":                 &moreInfoRevealer,
+	"primaryKanaLabel":                 &entryDisplay.primaryKanaLabel,
+	"primaryKanjiLabel":                &entryDisplay.primaryKanjiLabel,
+	"searchEntry":                      &search.entry,
+	"searchRevealer":                   &search.revealer,
+	"searchResults":                    &searchResults.list,
+	"searchResultsScrolledWindow":      &searchResults.scrolledWindow,
+	"searchToggleButton":               &search.toggle,
+	"strokeOrderScrolledWindow":        &kanjiDetails.strokeOrderScrolledWindow,
+	"writingsScrolledWindow":           &entryDisplay.writingsScrolledWindow,
 }
 
 var signals = map[string]interface{}{
@@ -94,6 +103,17 @@ var signals = map[string]interface{}{
 	"inhibitNext": func() bool { return true },
 	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 		kanjiDetails.FetchAndDisplay(kanjiList.kanji[row.GetIndex()])
+	},
+	"kanjiInputButtonToggled": func(b *gtk.ToggleButton) {
+		if b.GetActive() {
+			kanjiInput.Display()
+		}
+	},
+	"kanjiInputPopoverClosed": func() {
+		kanjiInput.button.SetActive(false)
+	},
+	"kanjiInputResultsChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {
+		search.InsertEntryText(kanjiInput.resultKanji[child.GetIndex()].Literal)
 	},
 	"moreInfoToggle": func() {
 		moreInfoRevealer.SetRevealChild(!moreInfoRevealer.GetRevealChild())
@@ -143,7 +163,8 @@ var signals = map[string]interface{}{
 }
 
 var dict *jmdict.JMdict
-var kanjiDict *kanjidic.Kanjidic
+var kanjiDict *kanjidic.KANJIDIC
+var radicalDict *kradfile.KRADFILE
 var exampleDict *tatoeba.Tatoeba
 var strokeDict *kanjivg.KanjiVG
 
@@ -163,7 +184,12 @@ func LaunchGUI(args []string) {
 
 	kanjiDict, err = kanjidic.New(db)
 	if err != nil {
-		log.Fatalf("Could not open Kanjidic handler: %v", err)
+		log.Fatalf("Could not open KANJIDIC handler: %v", err)
+	}
+
+	radicalDict, err = kradfile.New(db)
+	if err != nil {
+		log.Fatalf("Could not open KRADFILE handler: %v", err)
 	}
 
 	exampleDict, err = tatoeba.New(db)
@@ -214,7 +240,23 @@ func onActivate(app *gtk.Application) {
 	aboutAction.Connect("activate", func() { aboutDialog.Present() })
 	app.AddAction(aboutAction)
 
+	kanjiIconData, err := Asset("data/kanji-icon.png")
+	if err != nil {
+		log.Fatalf("Could not load kanji icon data: %v", err)
+	}
+	pbLoader, _ := gdk.PixbufLoaderNew()
+	kanjiIcon, err := pbLoader.WriteAndReturnPixbuf(kanjiIconData)
+	if err != nil {
+		log.Fatalf("Could not process kanji icon data: %v", err)
+	}
+
+	search.kanjiInput.InitRadicals()
+
 	window.Show()
+
+	height := search.entry.GetAllocatedHeight() * 3 / 5
+	kanjiIcon, _ = kanjiIcon.ScaleSimple(height, height, gdk.INTERP_BILINEAR)
+	kanjiInput.buttonIcon.SetFromPixbuf(kanjiIcon)
 }
 
 func getAppComponents(builder *gtk.Builder) {

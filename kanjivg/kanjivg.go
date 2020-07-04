@@ -61,7 +61,7 @@ func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 	for err == nil {
 		if start, ok := tok.(xml.StartElement); ok && start.Name.Local == "kanji" {
 			if err := convertEntry(decoder, &start, insert); err != nil {
-				return fmt.Errorf("could not process Kanjidic entry: %v", err)
+				return fmt.Errorf("could not process KANJIDIC entry: %v", err)
 			}
 			done++
 
@@ -72,7 +72,7 @@ func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 		tok, err = decoder.Token()
 	}
 	if err != io.EOF {
-		return fmt.Errorf("could not read from Kanjidic file: %v", err)
+		return fmt.Errorf("could not read from KANJIDIC file: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {

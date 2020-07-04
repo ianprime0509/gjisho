@@ -16,6 +16,8 @@ KANJIDIC_FILE=raw/kanjidic2.xml
 KANJIDIC_URL=http://www.edrdg.org/kanjidic/kanjidic2.xml.gz
 KANJIVG_FILE=raw/kanjivg-20160426.xml
 KANJIVG_URL=https://github.com/KanjiVG/kanjivg/releases/download/r20160426/kanjivg-20160426.xml.gz
+KRADFILE_FILE=raw/kradfile
+KRADFILE_URL=ftp://ftp.monash.edu/pub/nihongo/kradfile.gz
 
 SOURCE_FILES=\
 	bindata.go \
@@ -24,6 +26,7 @@ SOURCE_FILES=\
 	jmdict/jmdict.go \
 	kanjidic/kanjidic.go \
 	kanjivg/kanjivg.go \
+	kradfile/kradfile.go \
 	tatoeba/tatoeba.go
 
 all: gjisho gjisho.sqlite
@@ -36,6 +39,7 @@ fetch:
 	${CURL} -L ${JMDICT_URL} | ${GZIP} -d >'${JMDICT_FILE}'
 	${CURL} -L ${KANJIDIC_URL} | ${GZIP} -d >'${KANJIDIC_FILE}'
 	${CURL} -L ${KANJIVG_URL} | ${GZIP} -d >'${KANJIVG_FILE}'
+	${CURL} -L ${KRADFILE_URL} | ${GZIP} -d | iconv -f euc-jp -t utf-8 >'${KRADFILE_FILE}'
 
 install: install-database install-program
 
@@ -55,9 +59,10 @@ bindata.go: data/gjisho.glade
 gjisho: ${SOURCE_FILES}
 	${GO} build -tags fts5
 
-gjisho.sqlite: gjisho ${TATOEBA_FILE} ${JMDICT_FILE} ${KANJIDIC_FILE} ${KANJIVG_FILE}
+gjisho.sqlite: gjisho ${TATOEBA_FILE} ${JMDICT_FILE} ${KANJIDIC_FILE} ${KANJIVG_FILE} ${KRADFILE_FILE}
 	./gjisho -conv gjisho.sqlite \
 		-tatoeba '${TATOEBA_FILE}' \
 		-jmdict '${JMDICT_FILE}' \
 		-kanjidic '${KANJIDIC_FILE}' \
-		-kanjivg '${KANJIVG_FILE}'
+		-kanjivg '${KANJIVG_FILE}' \
+		-kradfile '${KRADFILE_FILE}'

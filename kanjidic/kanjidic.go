@@ -1,4 +1,4 @@
-// Package kanjidic contains types and functions for working with Kanjidic2
+// Package kanjidic contains types and functions for working with KANJIDIC2
 // data.
 package kanjidic
 
@@ -13,22 +13,22 @@ import (
 	"github.com/ianprime0509/gjisho/internal/util"
 )
 
-// Kanjidic is the Kanjidic2 database, containing data on kanji.
-type Kanjidic struct {
+// KANJIDIC is the KANJIDIC2 database, containing data on kanji.
+type KANJIDIC struct {
 	db         *sql.DB
 	fetchQuery *sql.Stmt
 }
 
-// New returns a new Kanjidic using the given database.
-func New(db *sql.DB) (*Kanjidic, error) {
+// New returns a new KANJIDIC using the given database.
+func New(db *sql.DB) (*KANJIDIC, error) {
 	fetchQuery, err := db.Prepare("SELECT data FROM Kanji WHERE character = ?")
 	if err != nil {
-		return nil, fmt.Errorf("could not prepare Kanjidic fetch query: %v", err)
+		return nil, fmt.Errorf("could not prepare KANJIDIC fetch query: %v", err)
 	}
-	return &Kanjidic{db, fetchQuery}, nil
+	return &KANJIDIC{db, fetchQuery}, nil
 }
 
-// ConvertInto converts the Kanjidic2 data from XML into the given database. The
+// ConvertInto converts the KANJIDIC2 data from XML into the given database. The
 // given progress callback, if non-nil, is called after every 1,000th converted
 // record with the total number of records converted so far.
 func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
@@ -39,7 +39,7 @@ func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 
 	kanjidic, err := os.Open(xmlPath)
 	if err != nil {
-		return fmt.Errorf("could not open Kanjidic file: %v", err)
+		return fmt.Errorf("could not open KANJIDIC file: %v", err)
 	}
 	defer kanjidic.Close()
 
@@ -62,7 +62,7 @@ func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 	for err == nil {
 		if start, ok := tok.(xml.StartElement); ok && start.Name.Local == "character" {
 			if err := convertEntry(decoder, &start, insert); err != nil {
-				return fmt.Errorf("could not process Kanjidic entry: %v", err)
+				return fmt.Errorf("could not process KANJIDIC entry: %v", err)
 			}
 			done++
 
@@ -73,7 +73,7 @@ func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 		tok, err = decoder.Token()
 	}
 	if err != io.EOF {
-		return fmt.Errorf("could not read from Kanjidic file: %v", err)
+		return fmt.Errorf("could not read from KANJIDIC file: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -116,7 +116,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insert *sql.Stm
 }
 
 // Fetch returns the character data for the given kanji.
-func (dict *Kanjidic) Fetch(kanji string) (Character, error) {
+func (dict *KANJIDIC) Fetch(kanji string) (Character, error) {
 	var data []byte
 	if err := dict.fetchQuery.QueryRow(kanji).Scan(&data); err != nil {
 		return Character{}, fmt.Errorf("scan error: %v", err)
