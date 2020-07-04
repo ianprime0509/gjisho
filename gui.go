@@ -74,9 +74,11 @@ var signals = map[string]interface{}{
 			log.Printf("Invalid URL: %v", uri)
 			return true
 		}
+		search.results.ClearSelection()
 		return navigation.FollowLink(url)
 	},
 	"exampleDetailsWordActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
+		search.results.ClearSelection()
 		navigation.GoTo(exampleDetails.words[row.GetIndex()].ID)
 		exampleDetails.Close()
 	},
@@ -125,8 +127,10 @@ var signals = map[string]interface{}{
 		buttonEv := &gdk.EventButton{Event: ev}
 		switch buttonEv.Button() {
 		case 8:
+			search.results.ClearSelection()
 			navigation.GoBack()
 		case 9:
+			search.results.ClearSelection()
 			navigation.GoForward()
 		}
 	},

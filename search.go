@@ -85,6 +85,11 @@ type SearchResultList struct {
 	nDisplayed     int
 }
 
+// ClearSelection clears the currently selected result.
+func (lst *SearchResultList) ClearSelection() {
+	lst.list.SelectRow(nil)
+}
+
 // Selected returns the currently selected search result, or nil if none is
 // selected.
 func (lst *SearchResultList) Selected() *jmdict.LookupResult {
