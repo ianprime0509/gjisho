@@ -87,63 +87,51 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                   <object class="GtkBox">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="orientation">vertical</property>
                     <child>
-                      <object class="GtkBox">
+                      <object class="GtkSearchEntry" id="searchEntry">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can_focus">True</property>
+                        <property name="margin_start">5</property>
+                        <property name="margin_end">5</property>
+                        <property name="margin_top">5</property>
+                        <property name="margin_bottom">5</property>
+                        <property name="primary_icon_name">edit-find-symbolic</property>
+                        <property name="primary_icon_activatable">False</property>
+                        <property name="primary_icon_sensitive">False</property>
+                        <signal name="key-press-event" handler="searchEntryKeyPress" swapped="no"/>
+                        <signal name="search-changed" handler="searchChanged" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleButton" id="kanjiInputButton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="tooltip_text" translatable="yes">Look up kanji by parts</property>
+                        <property name="margin_start">5</property>
+                        <property name="margin_end">5</property>
+                        <property name="margin_top">5</property>
+                        <property name="margin_bottom">5</property>
+                        <property name="relief">none</property>
+                        <signal name="toggled" handler="kanjiInputButtonToggled" swapped="no"/>
                         <child>
-                          <object class="GtkSearchEntry" id="searchEntry">
+                          <object class="GtkImage" id="kanjiInputButtonIcon">
                             <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="margin_start">5</property>
-                            <property name="margin_end">5</property>
-                            <property name="margin_top">5</property>
-                            <property name="margin_bottom">5</property>
-                            <property name="primary_icon_name">edit-find-symbolic</property>
-                            <property name="primary_icon_activatable">False</property>
-                            <property name="primary_icon_sensitive">False</property>
-                            <signal name="key-press-event" handler="searchEntryKeyPress" swapped="no"/>
-                            <signal name="search-changed" handler="searchChanged" swapped="no"/>
+                            <property name="can_focus">False</property>
+                            <property name="pixel_size">16</property>
+                            <property name="icon_name">image-missing</property>
                           </object>
-                          <packing>
-                            <property name="expand">True</property>
-                            <property name="fill">True</property>
-                            <property name="position">0</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkToggleButton" id="kanjiInputButton">
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="receives_default">True</property>
-                            <property name="tooltip_text" translatable="yes">Look up kanji by parts</property>
-                            <property name="margin_start">5</property>
-                            <property name="margin_end">5</property>
-                            <property name="margin_top">5</property>
-                            <property name="margin_bottom">5</property>
-                            <property name="relief">none</property>
-                            <signal name="toggled" handler="kanjiInputButtonToggled" swapped="no"/>
-                            <child>
-                              <object class="GtkImage" id="kanjiInputButtonIcon">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="pixel_size">16</property>
-                                <property name="icon_name">image-missing</property>
-                              </object>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">1</property>
-                          </packing>
                         </child>
                       </object>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">0</property>
+                        <property name="position">1</property>
                       </packing>
                     </child>
                   </object>
