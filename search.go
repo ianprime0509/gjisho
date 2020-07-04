@@ -175,6 +175,7 @@ type KanjiInput struct {
 	resultsScrolledWindow  *gtk.ScrolledWindow
 	results                *gtk.FlowBox
 	resultKanji            []kradfile.Kanji
+	cancelPrevious         context.CancelFunc
 }
 
 // InitRadicals initializes the radical input buttons.
@@ -272,18 +273,39 @@ func (ki *KanjiInput) toggleRadical(rad string) {
 }
 
 func (ki *KanjiInput) updateResults() {
-	rads := make([]string, 0, len(ki.selectedRadicals))
-	for rad := range ki.selectedRadicals {
-		rads = append(rads, rad)
-	}
+	ctx := ki.startDisplay()
+	ch := make(chan struct {
+		kanji []kradfile.Kanji
+		krads []string
+	})
 
-	kanji, krads, err := radicalDict.FetchByRadicals(rads)
-	if err != nil {
-		log.Printf("Error fetching kanji by radicals: %v", err)
-		return
-	}
-	ki.setResults(kanji)
-	ki.setSensitivity(krads)
+	go func() {
+		rads := make([]string, 0, len(ki.selectedRadicals))
+		for rad := range ki.selectedRadicals {
+			rads = append(rads, rad)
+		}
+
+		if kanji, krads, err := radicalDict.FetchByRadicals(rads); err == nil {
+			ch <- struct {
+				kanji []kradfile.Kanji
+				krads []string
+			}{kanji, krads}
+		} else {
+			log.Printf("Error fetching kanji by radicals: %v", err)
+		}
+		close(ch)
+	}()
+
+	go func() {
+		select {
+		case res := <-ch:
+			glib.IdleAdd(func() {
+				ki.setResults(res.kanji)
+				ki.setSensitivity(res.krads)
+			})
+		case <-ctx.Done():
+		}
+	}()
 }
 
 func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
@@ -316,6 +338,15 @@ func (ki *KanjiInput) setSensitivity(krads []string) {
 		_, ok := radSet[rad]
 		b.SetSensitive(ok)
 	}
+}
+
+func (ki *KanjiInput) startDisplay() context.Context {
+	if ki.cancelPrevious != nil {
+		ki.cancelPrevious()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	ki.cancelPrevious = cancel
+	return ctx
 }
 
 func kanjiLabelMarkup(k string, selected bool) string {
