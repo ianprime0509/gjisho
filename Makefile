@@ -1,11 +1,12 @@
 .POSIX:
 .SUFFIXES:
-.PHONY: all clean fetch install
+.PHONY: all clean fetch install install-program install-database
 
 PREFIX=/usr/local
 
 CURL=curl
 GO=go
+GZIP=gzip
 
 TATOEBA_FILE=raw/examples.utf
 TATOEBA_URL=ftp://ftp.monash.edu/pub/nihongo/examples.utf.gz
@@ -31,18 +32,22 @@ clean:
 	rm -f gjisho gjisho.sqlite
 
 fetch:
-	curl -L ${TATOEBA_URL} | gzip -d >${TATOEBA_FILE}
-	curl -L ${JMDICT_URL} | gzip -d >${JMDICT_FILE}
-	curl -L ${KANJIDIC_URL} | gzip -d >${KANJIDIC_FILE}
-	curl -L ${KANJIVG_URL} | gzip -d >${KANJIVG_FILE}
+	${CURL} -L ${TATOEBA_URL} | ${GZIP} -d >'${TATOEBA_FILE}'
+	${CURL} -L ${JMDICT_URL} | ${GZIP} -d >'${JMDICT_FILE}'
+	${CURL} -L ${KANJIDIC_URL} | ${GZIP} -d >'${KANJIDIC_FILE}'
+	${CURL} -L ${KANJIVG_URL} | ${GZIP} -d >'${KANJIVG_FILE}'
 
-install: gjisho gjisho.sqlite app/gjisho.desktop
-	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp gjisho ${DESTDIR}${PREFIX}/bin
-	mkdir -p ${DESTDIR}${PREFIX}/share/gjisho
-	cp gjisho.sqlite ${DESTDIR}${PREFIX}/share/gjisho
-	mkdir -p ${DESTDIR}${PREFIX}/share/applications
-	cp app/gjisho.desktop ${DESTDIR}${PREFIX}/share/applications
+install: install-database install-program
+
+install-database: gjisho.sqlite
+	mkdir -p '${DESTDIR}${PREFIX}/share/gjisho'
+	cp gjisho.sqlite '${DESTDIR}${PREFIX}/share/gjisho'
+
+install-program: gjisho app/gjisho.desktop
+	mkdir -p '${DESTDIR}${PREFIX}/bin'
+	cp gjisho '${DESTDIR}${PREFIX}/bin'
+	mkdir -p '${DESTDIR}${PREFIX}/share/applications'
+	cp app/gjisho.desktop '${DESTDIR}${PREFIX}/share/applications'
 
 bindata.go: data/gjisho.glade
 	${GO} generate
@@ -52,7 +57,7 @@ gjisho: ${SOURCE_FILES}
 
 gjisho.sqlite: gjisho ${TATOEBA_FILE} ${JMDICT_FILE} ${KANJIDIC_FILE} ${KANJIVG_FILE}
 	./gjisho -conv gjisho.sqlite \
-		-tatoeba ${TATOEBA_FILE} \
-		-jmdict ${JMDICT_FILE} \
-		-kanjidic ${KANJIDIC_FILE} \
-		-kanjivg ${KANJIVG_FILE}
+		-tatoeba '${TATOEBA_FILE}' \
+		-jmdict '${JMDICT_FILE}' \
+		-kanjidic '${KANJIDIC_FILE}' \
+		-kanjivg '${KANJIVG_FILE}'
