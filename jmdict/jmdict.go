@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"unicode"
 
@@ -24,7 +23,10 @@ type JMdict struct {
 
 // New returns a new JMdict using the given database.
 func New(db *sql.DB) (*JMdict, error) {
-	lookupQuery, err := db.Prepare("SELECT heading, primary_reading, gloss_summary, all_writings, priority, id FROM EntryLookup WHERE EntryLookup MATCH ?")
+	lookupQuery, err := db.Prepare(`SELECT heading, primary_reading, gloss_summary, all_writings, priority, id
+	FROM EntryLookup
+	WHERE EntryLookup MATCH ?
+	ORDER BY -bm25(EntryLookup, 10, 4, 2) + 2 * priority DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -174,9 +176,6 @@ func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].relevance(query) > results[j].relevance(query)
-	})
 
 	return results, nil
 }
@@ -259,9 +258,14 @@ func convertQuery(query string) string {
 		if sb.Len() > 0 {
 			sb.WriteString(" OR ")
 		}
+		esc := strings.ReplaceAll(token, `"`, `""`)
 		sb.WriteRune('"')
-		sb.WriteString(strings.ReplaceAll(token, `"`, `""`))
-		sb.WriteString(`"*`)
+		sb.WriteString(esc)
+		sb.WriteString(`"* OR "`)
+		// By also including the literal string as an additional query, we give
+		// greater weight to exact matches
+		sb.WriteString(esc)
+		sb.WriteRune('"')
 	}
 	return sb.String()
 }
@@ -274,41 +278,6 @@ type LookupResult struct {
 	allWritings    string
 	Priority       int
 	ID             int
-}
-
-// relevance returns a relative "relevance" score corresponding to the given
-// query.
-func (r LookupResult) relevance(query string) int {
-	tokens := strings.Fields(query)
-	for i := range tokens {
-		tokens[i] = strings.ToLower(tokens[i])
-	}
-
-	writeScore := 0
-	for _, w := range strings.Fields(r.allWritings) {
-		w = strings.ToLower(w)
-		for _, token := range tokens {
-			if w == token {
-				writeScore += 7
-			} else if strings.Contains(w, token) {
-				writeScore++
-			}
-		}
-	}
-
-	glossScore := 0
-	for _, gloss := range strings.Split(r.GlossSummary, "; ") {
-		gloss = strings.ToLower(gloss)
-		for _, token := range tokens {
-			if gloss == token {
-				glossScore += 7
-			} else if strings.Contains(gloss, token) {
-				glossScore++
-			}
-		}
-	}
-
-	return 5*writeScore + 5*glossScore + 2*r.Priority
 }
 
 // Entry is a single entry in the JMdict dictionary.
