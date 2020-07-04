@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"regexp"
 	"sort"
@@ -36,10 +35,9 @@ func New(db *sql.DB) (*Tatoeba, error) {
 }
 
 // ConvertInto converts the Tatoeba data from plain text into the given
-// database.
-func ConvertInto(txtPath string, db *sql.DB) error {
-	log.Print("Converting Tatoeba to database")
-
+// database. The given progress callback, if non-nil, is called after every
+// 10,000th record with the total number of records converted so far.
+func ConvertInto(txtPath string, db *sql.DB, progressCB func(int)) error {
 	tatoeba, err := os.Open(txtPath)
 	if err != nil {
 		return fmt.Errorf("could not open Tatoeba file: %v", err)
@@ -78,8 +76,8 @@ func ConvertInto(txtPath string, db *sql.DB) error {
 		}
 		done++
 
-		if done%10000 == 0 {
-			log.Printf("Done: %v\n", done)
+		if done%10000 == 0 && progressCB != nil {
+			progressCB(done)
 		}
 	}
 	if err != io.EOF {

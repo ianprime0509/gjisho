@@ -36,23 +36,25 @@ func convert() {
 		log.Fatalf("Error opening database: %v", err)
 	}
 
+	progressCB := func(done int) { log.Printf("Done: %v", done) }
 	if *jmdictPath != "" {
-		if err := jmdict.ConvertInto(*jmdictPath, db); err != nil {
+		log.Print("Converting JMdict")
+		if err := jmdict.ConvertInto(*jmdictPath, db, progressCB); err != nil {
 			log.Fatalf("Error converting JMdict: %v", err)
 		}
 	}
 	if *kanjidicPath != "" {
-		if err := kanjidic.ConvertInto(*kanjidicPath, db); err != nil {
+		if err := kanjidic.ConvertInto(*kanjidicPath, db, progressCB); err != nil {
 			log.Fatalf("Error converting Kanjidic: %v", err)
 		}
 	}
 	if *tatoebaPath != "" {
-		if err := tatoeba.ConvertInto(*tatoebaPath, db); err != nil {
+		if err := tatoeba.ConvertInto(*tatoebaPath, db, progressCB); err != nil {
 			log.Fatalf("Error converting Tatoeba: %v", err)
 		}
 	}
 	if *kanjiVGPath != "" {
-		if err := kanjivg.ConvertInto(*kanjiVGPath, db); err != nil {
+		if err := kanjivg.ConvertInto(*kanjiVGPath, db, progressCB); err != nil {
 			log.Fatalf("Error converting KanjiVG: %v", err)
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"os"
 	"regexp"
@@ -34,9 +33,10 @@ func New(db *sql.DB) (*KanjiVG, error) {
 	return &KanjiVG{db, fetchQuery}, nil
 }
 
-// ConvertInto converts the KanjiVG data from XML into the given database.
-func ConvertInto(xmlPath string, db *sql.DB) error {
-	log.Print("Converting KanjiVG to database")
+// ConvertInto converts the KanjiVG data from XML into the given database. The
+// given progress callback, if non-nil, is called after every 1,000th converted
+// record with the total number of records converted so far.
+func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 	kanjiVG, err := os.Open(xmlPath)
 	if err != nil {
 		return fmt.Errorf("could not open KanjiVG file: %v", err)
@@ -65,8 +65,8 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 			}
 			done++
 
-			if done%1000 == 0 {
-				log.Printf("Done: %v\n", done)
+			if done%1000 == 0 && progressCB != nil {
+				progressCB(done)
 			}
 		}
 		tok, err = decoder.Token()

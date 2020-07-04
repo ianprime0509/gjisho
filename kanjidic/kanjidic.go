@@ -8,7 +8,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/ianprime0509/gjisho/internal/util"
@@ -29,9 +28,10 @@ func New(db *sql.DB) (*Kanjidic, error) {
 	return &Kanjidic{db, fetchQuery}, nil
 }
 
-// ConvertInto converts the Kanjidic2 data from XML into the given database.
-func ConvertInto(xmlPath string, db *sql.DB) error {
-	log.Print("Converting Kanjidic2 to database")
+// ConvertInto converts the Kanjidic2 data from XML into the given database. The
+// given progress callback, if non-nil, is called after every 1,000th converted
+// record with the total number of records converted so far.
+func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
 	entities, err := util.ParseEntities(xmlPath)
 	if err != nil {
 		return fmt.Errorf("could not parse XML entities: %v", err)
@@ -66,8 +66,8 @@ func ConvertInto(xmlPath string, db *sql.DB) error {
 			}
 			done++
 
-			if done%1000 == 0 {
-				log.Printf("Done: %v\n", done)
+			if done%1000 == 0 && progressCB != nil {
+				progressCB(done)
 			}
 		}
 		tok, err = decoder.Token()
