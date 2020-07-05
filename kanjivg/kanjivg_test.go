@@ -236,6 +236,57 @@ func TestDrawTo(t *testing.T) {
 				Angle2: 2 * math.Pi,
 			}, Fill: true},
 		}},
+		// The sixth stroke of kvg:kanji_05b66
+		{"M37.25,46.5c1,0.25,3.75,0.25,5.5-0.25s18.25-4,20-4s2.75,0.75,1,2.25S54.5,53.5,53,54.75", false, []Drawing{
+			{Shape: Curve{
+				Shape: Shape{LineWidth: 1},
+				// c1,0.25,3.75,0.25,5.5-0.25
+				X:  37.25,
+				Y:  46.5,
+				X1: 38.25,
+				Y1: 46.75,
+				X2: 41.0,
+				Y2: 46.75,
+				X3: 42.75,
+				Y3: 46.25,
+			}, Fill: false},
+			{Shape: Curve{
+				Shape: Shape{LineWidth: 1},
+				// s18.25-4,20-4
+				X:  42.75,
+				Y:  46.25,
+				X1: 44.5,
+				Y1: 45.75,
+				X2: 61.0,
+				Y2: 42.25,
+				X3: 62.75,
+				Y3: 42.25,
+			}, Fill: false},
+			{Shape: Curve{
+				Shape: Shape{LineWidth: 1},
+				// s2.75,0.75,1,2.25
+				X:  62.75,
+				Y:  42.25,
+				X1: 64.5,
+				Y1: 42.25,
+				X2: 65.5,
+				Y2: 43.0,
+				X3: 63.75,
+				Y3: 44.5,
+			}, Fill: false},
+			{Shape: Curve{
+				Shape: Shape{LineWidth: 1},
+				// S54.5,53.5,53,54.75
+				X:  63.75,
+				Y:  44.5,
+				X1: 62.0,
+				Y1: 46.0,
+				X2: 54.5,
+				Y2: 53.5,
+				X3: 53.0,
+				Y3: 54.75,
+			}},
+		}},
 	}
 
 	closeTo := func(x, y float64) bool {

@@ -181,9 +181,9 @@ type Kanji struct {
 // Stroke is a stroke of a kanji, represented as an SVG path. See
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths.
 //
-// Currently, the only commands supported are M, m, C and c, since those are the
-// only ones actually needed for KanjiVG (although I may eventually implement
-// the other ones for completeness).
+// Currently, the only commands supported are M, m, C, c, S and s, since those
+// are the only ones actually needed for KanjiVG (although I may eventually
+// implement the other ones for completeness).
 type Stroke string
 
 // DrawTo draws the Stroke to the given Drawer. If markStart is true, a red dot
@@ -191,7 +191,7 @@ type Stroke string
 func (s Stroke) DrawTo(d Drawer, markStart bool) {
 	// We only set the first point after a M or m command
 	first := true
-	var firstX, firstY float64
+	var firstX, firstY, lastCtrlX, lastCtrlY float64
 
 	for cmd, args, path := readCommand(string(s)); cmd != ""; cmd, args, path = readCommand(path) {
 		switch cmd {
@@ -220,6 +220,7 @@ func (s Stroke) DrawTo(d Drawer, markStart bool) {
 			for len(args) > 0 {
 				args = ensureArgs(args, 6)
 				d.CurveTo(args[0], args[1], args[2], args[3], args[4], args[5])
+				lastCtrlX, lastCtrlY = args[2], args[3]
 				args = args[6:]
 			}
 		case "c":
@@ -227,7 +228,26 @@ func (s Stroke) DrawTo(d Drawer, markStart bool) {
 				args = ensureArgs(args, 6)
 				x, y := d.GetCurrentPoint()
 				d.CurveTo(x+args[0], y+args[1], x+args[2], y+args[3], x+args[4], y+args[5])
+				lastCtrlX, lastCtrlY = x+args[2], y+args[3]
 				args = args[6:]
+			}
+		case "S":
+			for len(args) > 0 {
+				args = ensureArgs(args, 4)
+				x, y := d.GetCurrentPoint()
+				diffX, diffY := x-lastCtrlX, y-lastCtrlY
+				d.CurveTo(x+diffX, y+diffY, args[0], args[1], args[2], args[3])
+				lastCtrlX, lastCtrlY = args[0], args[1]
+				args = args[4:]
+			}
+		case "s":
+			for len(args) > 0 {
+				args = ensureArgs(args, 4)
+				x, y := d.GetCurrentPoint()
+				diffX, diffY := x-lastCtrlX, y-lastCtrlY
+				d.CurveTo(x+diffX, y+diffY, x+args[0], y+args[1], x+args[2], y+args[3])
+				lastCtrlX, lastCtrlY = x+args[0], y+args[1]
+				args = args[4:]
 			}
 		}
 	}
@@ -244,8 +264,8 @@ func (s Stroke) DrawTo(d Drawer, markStart bool) {
 	}
 }
 
-var commandRegexp = regexp.MustCompile(`^.*?([MmCc])`)
-var argRegexp = regexp.MustCompile(`^[^MmCc]*?(-?[0-9]+\.?[0-9]*)`)
+var commandRegexp = regexp.MustCompile(`^.*?([MmCcSs])`)
+var argRegexp = regexp.MustCompile(`^[^MmCcSs]*?(-?[0-9]+\.?[0-9]*)`)
 
 func ensureArgs(args []float64, n int) []float64 {
 	for len(args) < n {
