@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"unicode"
 	"unicode/utf8"
 	"unsafe"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/gotk3/gotk3/pango"
 	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
+	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kradfile"
 )
 
@@ -23,12 +25,14 @@ type Search struct {
 	entry          *gtk.SearchEntry
 	kanjiInput     *KanjiInput
 	results        *SearchResultList
+	resultsKanji   *SearchResultsKanji
 	cancelPrevious context.CancelFunc // a function to cancel the previous search
 }
 
 // Search searches using the given query.
 func (s *Search) Search(query string) {
 	ctx := s.startSearch()
+	s.resultsKanji.FetchAndDisplay(ctx, query)
 	ch := make(chan []jmdict.LookupResult)
 
 	go func() {
@@ -163,18 +167,85 @@ func NewSearchResult(entry jmdict.LookupResult) *gtk.Box {
 	return box
 }
 
+// SearchResultsKanji is a display of kanji related to the search query.
+type SearchResultsKanji struct {
+	box   *gtk.FlowBox
+	kanji []kanjidic.Character
+}
+
+// FetchAndDisplay fetches and displays information about the kanji related to
+// the given search query.
+func (srk *SearchResultsKanji) FetchAndDisplay(ctx context.Context, query string) {
+	kanji := associatedKanji(query)
+	// Kanji lookup is fast enough that for now I'm just fetching in sequence
+	ch := make(chan []kanjidic.Character)
+
+	go func() {
+		res := make([]kanjidic.Character, 0, len(kanji))
+		for _, k := range kanji {
+			if c, err := kanjiDict.Fetch(k); err == nil {
+				res = append(res, c)
+			} else {
+				log.Printf("Error fetching kanji details for %q: %v", k, err)
+			}
+		}
+		ch <- res
+	}()
+
+	go func() {
+		select {
+		case res := <-ch:
+			glib.IdleAdd(func() { srk.display(res) })
+		case <-ctx.Done():
+		}
+	}()
+}
+
+func (srk *SearchResultsKanji) display(kanji []kanjidic.Character) {
+	util.RemoveChildren(&srk.box.Container)
+	for _, k := range kanji {
+		lbl, _ := gtk.LabelNew(fmt.Sprintf(`<span size="large">%v</span>`, k.Literal))
+		lbl.SetUseMarkup(true)
+		srk.box.Add(lbl)
+	}
+	srk.box.ShowAll()
+	srk.kanji = kanji
+}
+
+func associatedKanji(query string) []string {
+	// Very similar to Entry.AssociatedKanji. We want the resulting list of
+	// related kanji to be in order, so we make the values of the map the
+	// indices of the kanji in the final list.
+	set := make(map[rune]int)
+	idx := 0
+	for _, c := range query {
+		if unicode.Is(unicode.Han, c) {
+			if _, ok := set[c]; !ok {
+				set[c] = idx
+				idx++
+			}
+		}
+	}
+
+	kanji := make([]string, len(set))
+	for k, i := range set {
+		kanji[i] = string(k)
+	}
+	return kanji
+}
+
 // KanjiInput is a special input popover to make it easier to input kanji.
 type KanjiInput struct {
 	button                 *gtk.ToggleButton
 	buttonIcon             *gtk.Image
 	popover                *gtk.Popover
 	radicalsScrolledWindow *gtk.ScrolledWindow
-	radicals               *gtk.Box
+	radicalsBox            *gtk.Box
 	radicalButtons         map[string]*gtk.FlowBoxChild
 	selectedRadicals       map[string]struct{}
 	resultsScrolledWindow  *gtk.ScrolledWindow
-	results                *gtk.FlowBox
-	resultKanji            []kradfile.Kanji
+	resultsBox             *gtk.FlowBox
+	results                []kradfile.Kanji
 	cancelPrevious         context.CancelFunc
 }
 
@@ -205,7 +276,7 @@ func (ki *KanjiInput) InitRadicals() {
 			heading = fmt.Sprintf("%v strokes", s)
 		}
 		lbl, _ := gtk.LabelNew(heading)
-		ki.radicals.Add(lbl)
+		ki.radicalsBox.Add(lbl)
 
 		fb, _ := gtk.FlowBoxNew()
 		fb.SetMinChildrenPerLine(10)
@@ -228,7 +299,7 @@ func (ki *KanjiInput) InitRadicals() {
 				}
 			})
 		}
-		ki.radicals.Add(fb)
+		ki.radicalsBox.Add(fb)
 	}
 }
 
@@ -242,7 +313,7 @@ func (ki *KanjiInput) Display() {
 	for _, b := range ki.radicalButtons {
 		b.SetSensitive(true)
 	}
-	util.RemoveChildren(&ki.results.Container)
+	util.RemoveChildren(&ki.resultsBox.Container)
 	ki.popover.ShowAll()
 }
 
@@ -309,7 +380,7 @@ func (ki *KanjiInput) updateResults() {
 }
 
 func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
-	util.RemoveChildren(&ki.results.Container)
+	util.RemoveChildren(&ki.resultsBox.Container)
 	sort.Slice(kanji, func(i, j int) bool {
 		ki := kanji[i]
 		kj := kanji[j]
@@ -322,10 +393,10 @@ func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
 		lbl.SetUseMarkup(true)
 		b, _ := gtk.FlowBoxChildNew()
 		b.Add(lbl)
-		ki.results.Add(b)
+		ki.resultsBox.Add(b)
 	}
-	ki.resultKanji = kanji
-	ki.results.ShowAll()
+	ki.results = kanji
+	ki.resultsBox.ShowAll()
 }
 
 func (ki *KanjiInput) setSensitivity(krads []string) {

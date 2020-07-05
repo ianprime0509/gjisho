@@ -23,8 +23,9 @@ var aboutDialog *gtk.AboutDialog
 var moreInfoRevealer *gtk.Revealer
 
 var searchResults = new(SearchResultList)
+var searchResultsKanji = new(SearchResultsKanji)
 var kanjiInput = new(KanjiInput)
-var search = &Search{results: searchResults, kanjiInput: kanjiInput}
+var search = &Search{results: searchResults, resultsKanji: searchResultsKanji, kanjiInput: kanjiInput}
 var kanjiList = new(KanjiList)
 var kanjiDetails = new(KanjiDetails)
 var exampleList = new(ExampleList)
@@ -56,9 +57,9 @@ var appComponents = map[string]interface{}{
 	"kanjiInputButton":                 &kanjiInput.button,
 	"kanjiInputButtonIcon":             &kanjiInput.buttonIcon,
 	"kanjiInputPopover":                &kanjiInput.popover,
-	"kanjiInputRadicals":               &kanjiInput.radicals,
+	"kanjiInputRadicals":               &kanjiInput.radicalsBox,
 	"kanjiInputRadicalsScrolledWindow": &kanjiInput.radicalsScrolledWindow,
-	"kanjiInputResults":                &kanjiInput.results,
+	"kanjiInputResults":                &kanjiInput.resultsBox,
 	"kanjiInputResultsScrolledWindow":  &kanjiInput.resultsScrolledWindow,
 	"kanaWritingsLabel":                &entryDisplay.kanaWritingsLabel,
 	"kanjiList":                        &kanjiList.list,
@@ -70,6 +71,7 @@ var appComponents = map[string]interface{}{
 	"searchEntry":                      &search.entry,
 	"searchRevealer":                   &search.revealer,
 	"searchResults":                    &searchResults.list,
+	"searchResultsKanji":               &searchResultsKanji.box,
 	"searchResultsScrolledWindow":      &searchResults.scrolledWindow,
 	"searchToggleButton":               &search.toggle,
 	"strokeOrderScrolledWindow":        &kanjiDetails.strokeOrderScrolledWindow,
@@ -113,7 +115,7 @@ var signals = map[string]interface{}{
 		kanjiInput.button.SetActive(false)
 	},
 	"kanjiInputResultsChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {
-		search.InsertEntryText(kanjiInput.resultKanji[child.GetIndex()].Literal)
+		search.InsertEntryText(kanjiInput.results[child.GetIndex()].Literal)
 	},
 	"moreInfoToggle": func() {
 		moreInfoRevealer.SetRevealChild(!moreInfoRevealer.GetRevealChild())
@@ -134,6 +136,9 @@ var signals = map[string]interface{}{
 		if pos == gtk.POS_BOTTOM {
 			searchResults.ShowMore()
 		}
+	},
+	"searchResultsKanjiChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {
+		kanjiDetails.FetchAndDisplay(searchResultsKanji.kanji[child.GetIndex()])
 	},
 	"searchResultsRowSelected": func() {
 		sel := searchResults.Selected()

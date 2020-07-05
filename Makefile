@@ -26,7 +26,7 @@ SOURCE_FILES=\
 	jmdict/jmdict.go \
 	kanjidic/kanjidic.go \
 	kanjivg/kanjivg.go \
-	kradfile/kradfile.go \
+	kradfile/kradfile.go kradfile/radstrokes.go \
 	tatoeba/tatoeba.go
 
 all: gjisho gjisho.sqlite

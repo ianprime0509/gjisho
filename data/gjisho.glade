@@ -142,6 +142,19 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkFlowBox" id="searchResultsKanji">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="selection_mode">none</property>
+                    <signal name="child-activated" handler="searchResultsKanjiChildActivated" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkScrolledWindow" id="searchResultsScrolledWindow">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
@@ -166,7 +179,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                   <packing>
                     <property name="expand">True</property>
                     <property name="fill">True</property>
-                    <property name="position">1</property>
+                    <property name="position">2</property>
                   </packing>
                 </child>
               </object>
