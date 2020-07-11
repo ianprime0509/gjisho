@@ -32,3 +32,9 @@ These resources can be downloaded manually and placed into the correct locations
   - Download: <ftp://ftp.monash.edu/pub/nihongo/examples.utf.gz>
 - KanjiVG: <https://github.com/KanjiVG/kanjivg>
   - Download: <https://github.com/KanjiVG/kanjivg/releases/download/r20160426/kanjivg-20160426.xml.gz>
+
+## Screenshots
+
+![A screenshot of GJisho showing the kanji details view](static/kanji-details.png)
+![A screenshot of GJisho showing the example details view](static/example-details.png)
+![A screenshot of GJisho showing the kanji composition popup](static/kanji-compose.png)
