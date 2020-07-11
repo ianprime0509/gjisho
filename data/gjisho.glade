@@ -225,6 +225,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                           <object class="GtkLabel" id="primaryKanaLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="selectable">True</property>
                             <attributes>
                               <attribute name="scale" value="1.2"/>
                             </attributes>
@@ -242,6 +243,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                           <object class="GtkLabel" id="primaryKanjiLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="selectable">True</property>
                             <attributes>
                               <attribute name="scale" value="1.728"/>
                             </attributes>
@@ -264,6 +266,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                             <property name="margin_top">10</property>
                             <property name="margin_bottom">5</property>
                             <property name="wrap">True</property>
+                            <property name="selectable">True</property>
                             <property name="xalign">0</property>
                             <signal name="activate-link" handler="activateLink" swapped="no"/>
                             <style>
@@ -372,6 +375,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="can_focus">False</property>
                                         <property name="margin_start">5</property>
                                         <property name="wrap">True</property>
+                                        <property name="selectable">True</property>
                                         <property name="xalign">0</property>
                                         <attributes>
                                           <attribute name="scale" value="1.2"/>
@@ -408,6 +412,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                                         <property name="can_focus">False</property>
                                         <property name="margin_start">5</property>
                                         <property name="wrap">True</property>
+                                        <property name="selectable">True</property>
                                         <property name="xalign">0</property>
                                         <attributes>
                                           <attribute name="scale" value="1.2"/>
@@ -744,6 +749,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     <property name="margin_start">5</property>
                     <property name="margin_end">5</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                     <property name="xalign">0</property>
                     <attributes>
                       <attribute name="scale" value="1.728"/>
@@ -762,6 +768,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     <property name="margin_start">5</property>
                     <property name="margin_end">5</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                     <property name="xalign">0</property>
                     <attributes>
                       <attribute name="scale" value="1.4399999999999999"/>
@@ -840,6 +847,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="justify">center</property>
+                    <property name="selectable">True</property>
                     <attributes>
                       <attribute name="scale" value="2.488"/>
                     </attributes>
@@ -889,6 +897,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="justify">center</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -925,6 +934,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                         <property name="can_focus">False</property>
                         <property name="margin_start">5</property>
                         <property name="margin_end">5</property>
+                        <property name="selectable">True</property>
                         <property name="ellipsize">middle</property>
                         <property name="xalign">0</property>
                       </object>
@@ -953,6 +963,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                         <property name="can_focus">False</property>
                         <property name="margin_start">5</property>
                         <property name="margin_end">5</property>
+                        <property name="selectable">True</property>
                         <property name="ellipsize">middle</property>
                         <property name="xalign">0</property>
                       </object>

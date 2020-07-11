@@ -176,6 +176,7 @@ func newReadingMeaningLabel(rm kanjidic.ReadingMeaningGroup) *gtk.Label {
 	lbl.SetUseMarkup(true)
 	lbl.SetXAlign(0)
 	lbl.SetLineWrap(true)
+	lbl.SetSelectable(true)
 	return lbl
 }
 
