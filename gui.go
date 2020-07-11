@@ -125,12 +125,7 @@ var signals = map[string]interface{}{
 		query, _ := entry.GetText()
 		search.Search(query)
 	},
-	"searchEntryKeyPress": func(_ interface{}, ev *gdk.Event) {
-		keyEv := &gdk.EventKey{Event: ev}
-		if keyEv.KeyVal() == gdk.KEY_Escape {
-			search.Deactivate()
-		}
-	},
+	"searchEntryKeyPress": AdaptKeyHandler(searchEntryKeyMap),
 	"searchResultsEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
 		if pos == gtk.POS_BOTTOM {
 			searchResults.ShowMore()
@@ -146,23 +141,27 @@ var signals = map[string]interface{}{
 		}
 		navigation.GoTo(sel.ID)
 	},
-	"searchToggle": search.Toggle,
-	"windowButtonPress": func(_ interface{}, ev *gdk.Event) {
-		buttonEv := &gdk.EventButton{Event: ev}
-		switch buttonEv.Button() {
-		case 8:
-			search.results.ClearSelection()
-			navigation.GoBack()
-		case 9:
-			search.results.ClearSelection()
-			navigation.GoForward()
-		}
+	"searchToggle":      search.Toggle,
+	"windowButtonPress": AdaptButtonHandler(windowButtonMap),
+	"windowKeyPress":    AdaptKeyHandler(windowKeyMap),
+}
+
+var searchEntryKeyMap = KeyMap{
+	Key{gdk.KEY_Escape, 0}: search.Deactivate,
+}
+
+var windowKeyMap = KeyMap{
+	Key{gdk.KEY_f, gdk.GDK_CONTROL_MASK}: search.Activate,
+}
+
+var windowButtonMap = ButtonMap{
+	Button{8, 0}: func() {
+		search.results.ClearSelection()
+		navigation.GoBack()
 	},
-	"windowKeyPress": func(_ interface{}, ev *gdk.Event) {
-		keyEv := &gdk.EventKey{Event: ev}
-		if keyEv.KeyVal() == gdk.KEY_f && keyEv.State()&gdk.GDK_CONTROL_MASK != 0 {
-			search.Activate()
-		}
+	Button{9, 0}: func() {
+		search.results.ClearSelection()
+		navigation.GoForward()
 	},
 }
 

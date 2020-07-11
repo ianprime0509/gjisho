@@ -21,7 +21,7 @@ KRADFILE_URL=ftp://ftp.monash.edu/pub/nihongo/kradfile.gz
 
 SOURCE_FILES=\
 	bindata.go \
-	entry.go example.go gui.go kanji.go main.go search.go \
+	entry.go event.go example.go gui.go kanji.go main.go search.go \
 	datautil/datautil.go \
 	jmdict/jmdict.go \
 	kanjidic/kanjidic.go \
