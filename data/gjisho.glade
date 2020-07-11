@@ -208,83 +208,114 @@ Author: Ian Johnson <ianprime0509@gmail.com>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkScrolledWindow" id="entryScrolledWindow">
+              <object class="GtkStack" id="entryContentStack">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="hscrollbar_policy">never</property>
+                <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkViewport">
+                  <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Welcome to GJisho!
+
+Use the search button to search for words and kanji.</property>
+                    <property name="justify">center</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0.5</property>
+                    <property name="yalign">0.5</property>
+                    <attributes>
+                      <attribute name="scale" value="1.4399999999999999"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="name">welcome</property>
+                    <property name="title" translatable="yes">Welcome</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow" id="entryScrolledWindow">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="hscrollbar_policy">never</property>
                     <child>
-                      <object class="GtkBox">
+                      <object class="GtkViewport">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="orientation">vertical</property>
                         <child>
-                          <object class="GtkLabel" id="primaryKanaLabel">
+                          <object class="GtkBox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="selectable">True</property>
-                            <attributes>
-                              <attribute name="scale" value="1.2"/>
-                            </attributes>
-                            <style>
-                              <class name="primary-kana"/>
-                            </style>
+                            <property name="orientation">vertical</property>
+                            <child>
+                              <object class="GtkLabel" id="primaryKanaLabel">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="selectable">True</property>
+                                <attributes>
+                                  <attribute name="scale" value="1.2"/>
+                                </attributes>
+                                <style>
+                                  <class name="primary-kana"/>
+                                </style>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="primaryKanjiLabel">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="selectable">True</property>
+                                <attributes>
+                                  <attribute name="scale" value="1.728"/>
+                                </attributes>
+                                <style>
+                                  <class name="primary-kanji"/>
+                                </style>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="entryDetailsLabel">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="margin_start">5</property>
+                                <property name="margin_end">5</property>
+                                <property name="margin_top">10</property>
+                                <property name="margin_bottom">5</property>
+                                <property name="wrap">True</property>
+                                <property name="selectable">True</property>
+                                <property name="xalign">0</property>
+                                <signal name="activate-link" handler="activateLink" swapped="no"/>
+                                <style>
+                                  <class name="entry-details"/>
+                                </style>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <placeholder/>
+                            </child>
                           </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">0</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="primaryKanjiLabel">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="selectable">True</property>
-                            <attributes>
-                              <attribute name="scale" value="1.728"/>
-                            </attributes>
-                            <style>
-                              <class name="primary-kanji"/>
-                            </style>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">1</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="entryDetailsLabel">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="margin_start">5</property>
-                            <property name="margin_end">5</property>
-                            <property name="margin_top">10</property>
-                            <property name="margin_bottom">5</property>
-                            <property name="wrap">True</property>
-                            <property name="selectable">True</property>
-                            <property name="xalign">0</property>
-                            <signal name="activate-link" handler="activateLink" swapped="no"/>
-                            <style>
-                              <class name="entry-details"/>
-                            </style>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">2</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <placeholder/>
                         </child>
                       </object>
                     </child>
                   </object>
+                  <packing>
+                    <property name="name">entryContent</property>
+                    <property name="title" translatable="yes">Entry content</property>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
               </object>
               <packing>
@@ -572,6 +603,7 @@ Author: Ian Johnson <ianprime0509@gmail.com>
                 <child>
                   <object class="GtkToggleButton" id="moreInfoToggleButton">
                     <property name="visible">True</property>
+                    <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
                     <property name="tooltip_text" translatable="yes">More details</property>

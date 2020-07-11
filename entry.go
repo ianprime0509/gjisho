@@ -17,13 +17,16 @@ import (
 // EntryNavigation is a wrapper around an EntryDisplay that supports maintaining
 // forwards and backwards navigation in a history of entries.
 type EntryNavigation struct {
-	disp           *EntryDisplay
-	backButton     *gtk.Button
-	forwardButton  *gtk.Button
-	current        int
-	backStack      []int
-	forwardStack   []int
-	cancelPrevious context.CancelFunc // a function to cancel the previous navigation operation
+	contentStack         *gtk.Stack
+	disp                 *EntryDisplay
+	backButton           *gtk.Button
+	forwardButton        *gtk.Button
+	moreInfoToggleButton *gtk.ToggleButton
+	moreInfoRevealer     *gtk.Revealer
+	current              int
+	backStack            []int
+	forwardStack         []int
+	cancelPrevious       context.CancelFunc // a function to cancel the previous navigation operation
 }
 
 // FollowLink attempts to follow the given link and returns whether it was able
@@ -53,7 +56,7 @@ func (n *EntryNavigation) GoTo(id int) {
 	}
 	n.current = id
 	n.forwardStack = nil
-	n.updateSensitivity()
+	n.updateControls()
 
 	n.disp.FetchAndDisplay(ctx, id)
 }
@@ -71,7 +74,7 @@ func (n *EntryNavigation) GoBack() {
 	}
 	n.current = n.backStack[len(n.backStack)-1]
 	n.backStack = n.backStack[:len(n.backStack)-1]
-	n.updateSensitivity()
+	n.updateControls()
 
 	n.disp.FetchAndDisplay(ctx, n.current)
 }
@@ -89,9 +92,14 @@ func (n *EntryNavigation) GoForward() {
 	}
 	n.current = n.forwardStack[len(n.forwardStack)-1]
 	n.forwardStack = n.forwardStack[:len(n.forwardStack)-1]
-	n.updateSensitivity()
+	n.updateControls()
 
 	n.disp.FetchAndDisplay(ctx, n.current)
+}
+
+// ToggleMoreInfo toggles whether the additional information revealer is shown.
+func (n *EntryNavigation) ToggleMoreInfo() {
+	n.moreInfoRevealer.SetRevealChild(!n.moreInfoRevealer.GetRevealChild())
 }
 
 // startNavigation cancels any previous navigation in progress and returns a
@@ -105,9 +113,11 @@ func (n *EntryNavigation) startNavigation() context.Context {
 	return ctx
 }
 
-func (n *EntryNavigation) updateSensitivity() {
+func (n *EntryNavigation) updateControls() {
 	n.backButton.SetSensitive(len(n.backStack) > 0)
 	n.forwardButton.SetSensitive(len(n.forwardStack) > 0)
+	n.moreInfoToggleButton.SetSensitive(true)
+	n.contentStack.SetVisibleChildName("entryContent")
 }
 
 // EntryDisplay is the main display area for a dictionary entry.

@@ -19,7 +19,6 @@ import (
 const appID = "com.github.ianprime0509.gjisho"
 
 var aboutDialog *gtk.AboutDialog
-var moreInfoRevealer *gtk.Revealer
 
 var searchResults = new(SearchResultList)
 var searchResultsKanji = new(SearchResultsKanji)
@@ -35,6 +34,7 @@ var navigation = &EntryNavigation{disp: entryDisplay}
 var appComponents = map[string]interface{}{
 	"aboutDialog":                      &aboutDialog,
 	"backButton":                       &navigation.backButton,
+	"entryContentStack":                &navigation.contentStack,
 	"entryDetailsLabel":                &entryDisplay.detailsLabel,
 	"entryScrolledWindow":              &entryDisplay.scrolledWindow,
 	"exampleDetailsEnglishLabel":       &exampleDetails.englishLabel,
@@ -64,7 +64,8 @@ var appComponents = map[string]interface{}{
 	"kanjiList":                        &kanjiList.list,
 	"kanjiScrolledWindow":              &kanjiList.scrolledWindow,
 	"kanjiWritingsLabel":               &entryDisplay.kanjiWritingsLabel,
-	"moreInfoRevealer":                 &moreInfoRevealer,
+	"moreInfoRevealer":                 &navigation.moreInfoRevealer,
+	"moreInfoToggleButton":             &navigation.moreInfoToggleButton,
 	"primaryKanaLabel":                 &entryDisplay.primaryKanaLabel,
 	"primaryKanjiLabel":                &entryDisplay.primaryKanjiLabel,
 	"searchEntry":                      &search.entry,
@@ -116,11 +117,9 @@ var signals = map[string]interface{}{
 	"kanjiInputResultsChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {
 		search.InsertEntryText(kanjiInput.results[child.GetIndex()].Literal)
 	},
-	"moreInfoToggle": func() {
-		moreInfoRevealer.SetRevealChild(!moreInfoRevealer.GetRevealChild())
-	},
-	"navigateBack":    func() { navigation.GoBack() },
-	"navigateForward": func() { navigation.GoForward() },
+	"moreInfoToggle":  navigation.ToggleMoreInfo,
+	"navigateBack":    navigation.GoBack,
+	"navigateForward": navigation.GoForward,
 	"searchChanged": func(entry *gtk.SearchEntry) {
 		query, _ := entry.GetText()
 		search.Search(query)
