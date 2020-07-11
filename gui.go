@@ -9,7 +9,6 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kanjivg"
@@ -177,7 +176,7 @@ var strokeDict *kanjivg.KanjiVG
 // arguments to GTK. It does not return an error; if any errors occur here, the
 // program will terminate.
 func LaunchGUI(args []string) {
-	db, err := util.OpenDB()
+	db, err := OpenDB()
 	if err != nil {
 		log.Fatalf("Could not open database: %v", err)
 	}

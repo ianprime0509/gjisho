@@ -14,7 +14,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/ianprime0509/gjisho/internal/util"
+	"github.com/ianprime0509/gjisho/datautil"
 )
 
 // KanjiVG is the KanjiVG database, containing data on kanji stroke order and
@@ -104,7 +104,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insert *sql.Stm
 	if err != nil {
 		return err
 	}
-	data, err := util.MarshalCompressed(kanji)
+	data, err := datautil.MarshalCompressed(kanji)
 	if err != nil {
 		return fmt.Errorf("could not marshal stroke order JSON: %v", err)
 	}
@@ -165,7 +165,7 @@ func (kvg *KanjiVG) Fetch(kanji string) (Kanji, error) {
 	}
 
 	var character Kanji
-	if err := util.UnmarshalCompressed(data, &character); err != nil {
+	if err := datautil.UnmarshalCompressed(data, &character); err != nil {
 		return Kanji{}, fmt.Errorf("could not unmarshal data: %v", err)
 	}
 

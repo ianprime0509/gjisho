@@ -7,7 +7,6 @@ import (
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/tatoeba"
 )
@@ -91,12 +90,12 @@ func (ed *ExampleDetails) display(ex tatoeba.Example, words []jmdict.LookupResul
 	ed.englishLabel.SetText(ex.English)
 
 	ed.words = words
-	util.RemoveChildren(&ed.wordsList.Container)
+	RemoveChildren(&ed.wordsList.Container)
 	for _, w := range ed.words {
 		ed.wordsList.Add(NewSearchResult(w))
 	}
 	ed.wordsList.ShowAll()
-	util.ScrollToStart(ed.scrolledWindow)
+	ScrollToStart(ed.scrolledWindow)
 
 	ed.window.Present()
 }

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/ianprime0509/gjisho/internal/util"
+	"github.com/ianprime0509/gjisho/datautil"
 )
 
 // JMdict is the JMdict database, containing data on Japanese words and phrases.
@@ -42,7 +42,7 @@ func New(db *sql.DB) (*JMdict, error) {
 // given progress callback, if non-nil, is called after every 10,000th converted
 // record with the total number of records converted so far.
 func ConvertInto(xmlPath string, db *sql.DB, progressCB func(int)) error {
-	entities, err := util.ParseEntities(xmlPath)
+	entities, err := datautil.ParseEntities(xmlPath)
 	if err != nil {
 		return fmt.Errorf("could not parse XML entities: %v", err)
 	}
@@ -134,7 +134,7 @@ func convertEntry(decoder *xml.Decoder, start *xml.StartElement, insertEntry *sq
 	if err := decoder.DecodeElement(&entry, start); err != nil {
 		return fmt.Errorf("could not unmarshal entry XML: %v", err)
 	}
-	data, err := util.MarshalCompressed(&entry)
+	data, err := datautil.MarshalCompressed(&entry)
 	if err != nil {
 		return fmt.Errorf("could not marshal entry JSON: %v", err)
 	}
@@ -161,7 +161,7 @@ func (dict *JMdict) Fetch(id int) (Entry, error) {
 	}
 
 	var entry Entry
-	if err := util.UnmarshalCompressed(data, &entry); err != nil {
+	if err := datautil.UnmarshalCompressed(data, &entry); err != nil {
 		return Entry{}, fmt.Errorf("could not unmarshal data: %v", err)
 	}
 

@@ -12,7 +12,6 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
-	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/kradfile"
@@ -121,10 +120,10 @@ func (lst *SearchResultList) Selected() *jmdict.LookupResult {
 // Set sets the currently displayed search results.
 func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
 	lst.results = results
-	util.RemoveChildren(&lst.list.Container)
+	RemoveChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.ShowMore()
-	util.ScrollToStart(lst.scrolledWindow)
+	ScrollToStart(lst.scrolledWindow)
 }
 
 // ShowMore displays more search results in the list.
@@ -202,7 +201,7 @@ func (srk *SearchResultsKanji) FetchAndDisplay(ctx context.Context, query string
 }
 
 func (srk *SearchResultsKanji) display(kanji []kanjidic.Character) {
-	util.RemoveChildren(&srk.box.Container)
+	RemoveChildren(&srk.box.Container)
 	for _, k := range kanji {
 		lbl, _ := gtk.LabelNew(fmt.Sprintf(`<span size="large">%v</span>`, k.Literal))
 		lbl.SetUseMarkup(true)
@@ -305,15 +304,15 @@ func (ki *KanjiInput) InitRadicals() {
 
 // Display displays the kanji input popover.
 func (ki *KanjiInput) Display() {
-	util.ScrollToStart(ki.radicalsScrolledWindow)
-	util.ScrollToStart(ki.resultsScrolledWindow)
+	ScrollToStart(ki.radicalsScrolledWindow)
+	ScrollToStart(ki.resultsScrolledWindow)
 	for rad := range ki.selectedRadicals {
 		ki.unselectRadical(rad)
 	}
 	for _, b := range ki.radicalButtons {
 		b.SetSensitive(true)
 	}
-	util.RemoveChildren(&ki.resultsBox.Container)
+	RemoveChildren(&ki.resultsBox.Container)
 	ki.popover.ShowAll()
 }
 
@@ -380,7 +379,7 @@ func (ki *KanjiInput) updateResults() {
 }
 
 func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
-	util.RemoveChildren(&ki.resultsBox.Container)
+	RemoveChildren(&ki.resultsBox.Container)
 	sort.Slice(kanji, func(i, j int) bool {
 		ki := kanji[i]
 		kj := kanji[j]

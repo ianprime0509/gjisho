@@ -9,7 +9,6 @@ import (
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/ianprime0509/gjisho/internal/util"
 	"github.com/ianprime0509/gjisho/jmdict"
 	"github.com/ianprime0509/gjisho/kanjidic"
 	"github.com/ianprime0509/gjisho/tatoeba"
@@ -162,8 +161,8 @@ func (disp *EntryDisplay) display(entry jmdict.Entry) {
 	disp.detailsLabel.SetMarkup(fmtSenses(entry.Senses))
 	disp.kanjiWritingsLabel.SetMarkup(fmtKanjiWritings(entry.KanjiWritings))
 	disp.kanaWritingsLabel.SetMarkup(fmtKanaReadings(entry.KanaWritings))
-	util.ScrollToStart(disp.writingsScrolledWindow)
-	util.ScrollToStart(disp.scrolledWindow)
+	ScrollToStart(disp.writingsScrolledWindow)
+	ScrollToStart(disp.scrolledWindow)
 }
 
 func fmtKanjiWritings(kanji []jmdict.KanjiWriting) string {
@@ -315,13 +314,13 @@ func (lst *KanjiList) FetchAndDisplay(ctx context.Context, kanji []string) {
 }
 
 func (lst *KanjiList) display(kanji []kanjidic.Character) {
-	util.RemoveChildren(&lst.list.Container)
+	RemoveChildren(&lst.list.Container)
 	lst.kanji = kanji
 	for _, result := range lst.kanji {
 		lst.list.Add(newKanjiListRow(result))
 	}
 	lst.list.ShowAll()
-	util.ScrollToStart(lst.scrolledWindow)
+	ScrollToStart(lst.scrolledWindow)
 }
 
 func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
@@ -390,11 +389,11 @@ func (lst *ExampleList) ShowMore() {
 }
 
 func (lst *ExampleList) display(examples []tatoeba.Example) {
-	util.RemoveChildren(&lst.list.Container)
+	RemoveChildren(&lst.list.Container)
 	lst.nDisplayed = 0
 	lst.examples = examples
 	lst.ShowMore()
-	util.ScrollToStart(lst.scrolledWindow)
+	ScrollToStart(lst.scrolledWindow)
 }
 
 func newExampleListRow(ex tatoeba.Example) *gtk.ListBoxRow {

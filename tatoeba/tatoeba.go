@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ianprime0509/gjisho/internal/util"
+	"github.com/ianprime0509/gjisho/datautil"
 )
 
 // Tatoeba is the Tatoeba database, containing Japanese-English example
@@ -122,7 +122,7 @@ func createTables(db *sql.DB) error {
 }
 
 func convertExample(ex Example, insertExample *sql.Stmt, insertLookup *sql.Stmt) error {
-	data, err := util.MarshalCompressed(&ex)
+	data, err := datautil.MarshalCompressed(&ex)
 	if err != nil {
 		return fmt.Errorf("could not marshal example JSON: %v", err)
 	}
@@ -155,7 +155,7 @@ func (tb *Tatoeba) FetchByWord(word string) ([]Example, error) {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
 		var result Example
-		if err := util.UnmarshalCompressed(data, &result); err != nil {
+		if err := datautil.UnmarshalCompressed(data, &result); err != nil {
 			return nil, fmt.Errorf("could not unmarshal data: %v", err)
 		}
 		results = append(results, result)
