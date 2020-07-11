@@ -1,4 +1,4 @@
-//go:generate go run github.com/go-bindata/go-bindata/go-bindata -ignore .*~ -modtime 0 data/
+//go:generate go run github.com/go-bindata/go-bindata/go-bindata -ignore .*~ -nometadata data/
 
 // Package main contains the main code for GJisho.
 package main

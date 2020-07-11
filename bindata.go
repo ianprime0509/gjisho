@@ -82,7 +82,7 @@ func dataGjishoGlade() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/gjisho.glade", size: 57682, mode: os.FileMode(436), modTime: time.Unix(1594478925, 0)}
+	info := bindataFileInfo{name: "data/gjisho.glade", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -102,7 +102,7 @@ func dataKanjiIconPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/kanji-icon.png", size: 4945, mode: os.FileMode(436), modTime: time.Unix(1593905574, 0)}
+	info := bindataFileInfo{name: "data/kanji-icon.png", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
