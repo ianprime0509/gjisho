@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 	"github.com/ianprime0509/gjisho/tatoeba"
 )
 
-// ExampleDetails is a modal window showing additional details about an example.
-type ExampleDetails struct {
+// exampleDetailsModal is a modal window showing additional details about an example.
+type exampleDetailsModal struct {
 	window         *gtk.Window
 	japaneseLabel  *gtk.Label
 	englishLabel   *gtk.Label
@@ -22,9 +22,9 @@ type ExampleDetails struct {
 	cancelPrevious context.CancelFunc
 }
 
-// FetchAndDisplay fetches additional information for the given example,
+// fetchAndDisplay fetches additional information for the given example,
 // displays it in the details modal and shows it.
-func (ed *ExampleDetails) FetchAndDisplay(ex tatoeba.Example) {
+func (ed *exampleDetailsModal) fetchAndDisplay(ex tatoeba.Example) {
 	ctx := ed.startDisplay()
 
 	indices := ex.UniqueIndices()
@@ -39,7 +39,7 @@ func (ed *ExampleDetails) FetchAndDisplay(ex tatoeba.Example) {
 			if idx.Disambiguation != "" {
 				ref += "・" + idx.Disambiguation
 			}
-			if e, err := dict.LookupByRef(ref); err == nil {
+			if e, err := db.JMdict.LookupByRef(ref); err == nil {
 				ch <- struct {
 					idx tatoeba.Index
 					res jmdict.LookupResult
@@ -73,12 +73,12 @@ func (ed *ExampleDetails) FetchAndDisplay(ex tatoeba.Example) {
 	}()
 }
 
-// Close closes the example details modal.
-func (ed *ExampleDetails) Close() {
+// close closes the example details modal.
+func (ed *exampleDetailsModal) close() {
 	ed.window.Close()
 }
 
-func (ed *ExampleDetails) display(ex tatoeba.Example, words []jmdict.LookupResult) {
+func (ed *exampleDetailsModal) display(ex tatoeba.Example, words []jmdict.LookupResult) {
 	jpText := new(strings.Builder)
 	for _, seg := range ex.Segments() {
 		if jpText.Len() > 0 {
@@ -90,17 +90,17 @@ func (ed *ExampleDetails) display(ex tatoeba.Example, words []jmdict.LookupResul
 	ed.englishLabel.SetText(ex.English)
 
 	ed.words = words
-	RemoveChildren(&ed.wordsList.Container)
+	removeChildren(&ed.wordsList.Container)
 	for _, w := range ed.words {
-		ed.wordsList.Add(NewSearchResult(w))
+		ed.wordsList.Add(newSearchResult(w))
 	}
 	ed.wordsList.ShowAll()
-	ScrollToStart(ed.scrolledWindow)
+	scrollToStart(ed.scrolledWindow)
 
 	ed.window.Present()
 }
 
-func (ed *ExampleDetails) startDisplay() context.Context {
+func (ed *exampleDetailsModal) startDisplay() context.Context {
 	if ed.cancelPrevious != nil {
 		ed.cancelPrevious()
 	}

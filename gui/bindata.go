@@ -2,7 +2,7 @@
 // sources:
 // data/gjisho.glade
 // data/kanji-icon.png
-package main
+package gui
 
 import (
 	"bytes"

@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"context"
@@ -17,25 +17,25 @@ import (
 	"github.com/ianprime0509/gjisho/kradfile"
 )
 
-// Search is a wrapper around the search-related components of the app.
-type Search struct {
+// appSearch is a wrapper around the search-related components of the app.
+type appSearch struct {
 	toggle         *gtk.ToggleButton
 	revealer       *gtk.Revealer
 	entry          *gtk.SearchEntry
-	kanjiInput     *KanjiInput
-	results        *SearchResultList
-	resultsKanji   *SearchResultsKanji
+	kanjiInput     *kanjiInput
+	results        *searchResultList
+	resultsKanji   *searchResultsKanji
 	cancelPrevious context.CancelFunc // a function to cancel the previous search
 }
 
-// Search searches using the given query.
-func (s *Search) Search(query string) {
+// search searches using the given query.
+func (s *appSearch) search(query string) {
 	ctx := s.startSearch()
-	s.resultsKanji.FetchAndDisplay(ctx, query)
+	s.resultsKanji.fetchAndDisplay(ctx, query)
 	ch := make(chan []jmdict.LookupResult)
 
 	go func() {
-		if results, err := dict.Lookup(query); err == nil {
+		if results, err := db.JMdict.Lookup(query); err == nil {
 			ch <- results
 		} else {
 			log.Printf("Lookup query error: %v", err)
@@ -46,19 +46,19 @@ func (s *Search) Search(query string) {
 	go func() {
 		select {
 		case results := <-ch:
-			glib.IdleAdd(func() { s.results.Set(results) })
+			glib.IdleAdd(func() { s.results.set(results) })
 		case <-ctx.Done():
 		}
 	}()
 }
 
-// Toggle toggles whether the search pane is open.
-func (s *Search) Toggle() {
+// toggleOpen toggles whether the search pane is open.
+func (s *appSearch) toggleOpen() {
 	s.revealer.SetRevealChild(!s.revealer.GetRevealChild())
 }
 
-// Activate activates and focuses the search entry.
-func (s *Search) Activate() {
+// activateEntry activates and focuses the search entry.
+func (s *appSearch) activateEntry() {
 	s.toggle.SetActive(true)
 	s.revealer.SetRevealChild(true)
 	// If we grab focus immediately, then if this is the first time the search
@@ -70,15 +70,15 @@ func (s *Search) Activate() {
 	glib.IdleAdd(s.entry.GrabFocus)
 }
 
-// Deactivate deactivates the search entry.
-func (s *Search) Deactivate() {
+// deactivateEntry deactivates the search entry.
+func (s *appSearch) deactivateEntry() {
 	s.toggle.SetActive(false)
 	s.revealer.SetRevealChild(false)
 }
 
-// InsertEntryText inserts text in the search entry buffer at the current
+// insertEntryText inserts text in the search entry buffer at the current
 // position.
-func (s *Search) InsertEntryText(text string) {
+func (s *appSearch) insertEntryText(text string) {
 	old, _ := search.entry.GetText()
 	rs := []rune(old)
 	pos := search.entry.GetPosition()
@@ -86,7 +86,7 @@ func (s *Search) InsertEntryText(text string) {
 	search.entry.SetPosition(pos + utf8.RuneCountInString(text))
 }
 
-func (s *Search) startSearch() context.Context {
+func (s *appSearch) startSearch() context.Context {
 	if s.cancelPrevious != nil {
 		s.cancelPrevious()
 	}
@@ -95,48 +95,48 @@ func (s *Search) startSearch() context.Context {
 	return ctx
 }
 
-// SearchResultList is a list of search results displayed in the GUI.
-type SearchResultList struct {
+// searchResultList is a list of search results displayed in the GUI.
+type searchResultList struct {
 	list           *gtk.ListBox
 	scrolledWindow *gtk.ScrolledWindow
 	results        []jmdict.LookupResult
 	nDisplayed     int
 }
 
-// ClearSelection clears the currently selected result.
-func (lst *SearchResultList) ClearSelection() {
+// clearSelection clears the currently selected result.
+func (lst *searchResultList) clearSelection() {
 	lst.list.SelectRow(nil)
 }
 
-// Selected returns the currently selected search result, or nil if none is
+// selected returns the currently selected search result, or nil if none is
 // selected.
-func (lst *SearchResultList) Selected() *jmdict.LookupResult {
+func (lst *searchResultList) selected() *jmdict.LookupResult {
 	if row := lst.list.GetSelectedRow(); row != nil {
 		return &lst.results[row.GetIndex()]
 	}
 	return nil
 }
 
-// Set sets the currently displayed search results.
-func (lst *SearchResultList) Set(results []jmdict.LookupResult) {
+// set sets the currently displayed search results.
+func (lst *searchResultList) set(results []jmdict.LookupResult) {
 	lst.results = results
-	RemoveChildren(&lst.list.Container)
+	removeChildren(&lst.list.Container)
 	lst.nDisplayed = 0
-	lst.ShowMore()
-	ScrollToStart(lst.scrolledWindow)
+	lst.showMore()
+	scrollToStart(lst.scrolledWindow)
 }
 
-// ShowMore displays more search results in the list.
-func (lst *SearchResultList) ShowMore() {
+// showMore displays more search results in the list.
+func (lst *searchResultList) showMore() {
 	maxIndex := lst.nDisplayed + 50
 	for ; lst.nDisplayed < len(lst.results) && lst.nDisplayed < maxIndex; lst.nDisplayed++ {
-		lst.list.Add(NewSearchResult(lst.results[lst.nDisplayed]))
+		lst.list.Add(newSearchResult(lst.results[lst.nDisplayed]))
 	}
 	lst.list.ShowAll()
 }
 
-// NewSearchResult creates a search result widget for display.
-func NewSearchResult(entry jmdict.LookupResult) *gtk.Box {
+// newSearchResult creates a search result widget for display.
+func newSearchResult(entry jmdict.LookupResult) *gtk.Box {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 
 	headingBox, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
@@ -166,15 +166,15 @@ func NewSearchResult(entry jmdict.LookupResult) *gtk.Box {
 	return box
 }
 
-// SearchResultsKanji is a display of kanji related to the search query.
-type SearchResultsKanji struct {
+// searchResultsKanji is a display of kanji related to the search query.
+type searchResultsKanji struct {
 	box   *gtk.FlowBox
 	kanji []kanjidic.Character
 }
 
-// FetchAndDisplay fetches and displays information about the kanji related to
+// fetchAndDisplay fetches and displays information about the kanji related to
 // the given search query.
-func (srk *SearchResultsKanji) FetchAndDisplay(ctx context.Context, query string) {
+func (srk *searchResultsKanji) fetchAndDisplay(ctx context.Context, query string) {
 	kanji := associatedKanji(query)
 	// Kanji lookup is fast enough that for now I'm just fetching in sequence
 	ch := make(chan []kanjidic.Character)
@@ -182,7 +182,7 @@ func (srk *SearchResultsKanji) FetchAndDisplay(ctx context.Context, query string
 	go func() {
 		res := make([]kanjidic.Character, 0, len(kanji))
 		for _, k := range kanji {
-			if c, err := kanjiDict.Fetch(k); err == nil {
+			if c, err := db.KANJIDIC.Fetch(k); err == nil {
 				res = append(res, c)
 			} else {
 				log.Printf("Error fetching kanji details for %q: %v", k, err)
@@ -200,8 +200,8 @@ func (srk *SearchResultsKanji) FetchAndDisplay(ctx context.Context, query string
 	}()
 }
 
-func (srk *SearchResultsKanji) display(kanji []kanjidic.Character) {
-	RemoveChildren(&srk.box.Container)
+func (srk *searchResultsKanji) display(kanji []kanjidic.Character) {
+	removeChildren(&srk.box.Container)
 	for _, k := range kanji {
 		lbl, _ := gtk.LabelNew(fmt.Sprintf(`<span size="large">%v</span>`, k.Literal))
 		lbl.SetUseMarkup(true)
@@ -233,8 +233,8 @@ func associatedKanji(query string) []string {
 	return kanji
 }
 
-// KanjiInput is a special input popover to make it easier to input kanji.
-type KanjiInput struct {
+// kanjiInput is a special input popover to make it easier to input kanji.
+type kanjiInput struct {
 	button                 *gtk.ToggleButton
 	buttonIcon             *gtk.Image
 	popover                *gtk.Popover
@@ -248,8 +248,8 @@ type KanjiInput struct {
 	cancelPrevious         context.CancelFunc
 }
 
-// InitRadicals initializes the radical input buttons.
-func (ki *KanjiInput) InitRadicals() {
+// initRadicals initializes the radical input buttons.
+func (ki *kanjiInput) initRadicals() {
 	ki.radicalButtons = make(map[string]*gtk.FlowBoxChild, len(kradfile.RadicalStrokes))
 	ki.selectedRadicals = make(map[string]struct{})
 
@@ -302,21 +302,21 @@ func (ki *KanjiInput) InitRadicals() {
 	}
 }
 
-// Display displays the kanji input popover.
-func (ki *KanjiInput) Display() {
-	ScrollToStart(ki.radicalsScrolledWindow)
-	ScrollToStart(ki.resultsScrolledWindow)
+// display displays the kanji input popover.
+func (ki *kanjiInput) display() {
+	scrollToStart(ki.radicalsScrolledWindow)
+	scrollToStart(ki.resultsScrolledWindow)
 	for rad := range ki.selectedRadicals {
 		ki.unselectRadical(rad)
 	}
 	for _, b := range ki.radicalButtons {
 		b.SetSensitive(true)
 	}
-	RemoveChildren(&ki.resultsBox.Container)
+	removeChildren(&ki.resultsBox.Container)
 	ki.popover.ShowAll()
 }
 
-func (ki *KanjiInput) selectRadical(rad string) {
+func (ki *kanjiInput) selectRadical(rad string) {
 	ki.selectedRadicals[rad] = struct{}{}
 	b := ki.radicalButtons[rad]
 	child, _ := b.GetChild()
@@ -325,7 +325,7 @@ func (ki *KanjiInput) selectRadical(rad string) {
 	b.ShowAll()
 }
 
-func (ki *KanjiInput) unselectRadical(rad string) {
+func (ki *kanjiInput) unselectRadical(rad string) {
 	delete(ki.selectedRadicals, rad)
 	b := ki.radicalButtons[rad]
 	child, _ := b.GetChild()
@@ -334,7 +334,7 @@ func (ki *KanjiInput) unselectRadical(rad string) {
 	b.ShowAll()
 }
 
-func (ki *KanjiInput) toggleRadical(rad string) {
+func (ki *kanjiInput) toggleRadical(rad string) {
 	if _, ok := ki.selectedRadicals[rad]; ok {
 		ki.unselectRadical(rad)
 	} else {
@@ -342,7 +342,7 @@ func (ki *KanjiInput) toggleRadical(rad string) {
 	}
 }
 
-func (ki *KanjiInput) updateResults() {
+func (ki *kanjiInput) updateResults() {
 	ctx := ki.startDisplay()
 	ch := make(chan struct {
 		kanji []kradfile.Kanji
@@ -355,7 +355,7 @@ func (ki *KanjiInput) updateResults() {
 			rads = append(rads, rad)
 		}
 
-		if kanji, krads, err := radicalDict.FetchByRadicals(rads); err == nil {
+		if kanji, krads, err := db.KRADFILE.FetchByRadicals(rads); err == nil {
 			ch <- struct {
 				kanji []kradfile.Kanji
 				krads []string
@@ -378,8 +378,8 @@ func (ki *KanjiInput) updateResults() {
 	}()
 }
 
-func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
-	RemoveChildren(&ki.resultsBox.Container)
+func (ki *kanjiInput) setResults(kanji []kradfile.Kanji) {
+	removeChildren(&ki.resultsBox.Container)
 	sort.Slice(kanji, func(i, j int) bool {
 		ki := kanji[i]
 		kj := kanji[j]
@@ -398,7 +398,7 @@ func (ki *KanjiInput) setResults(kanji []kradfile.Kanji) {
 	ki.resultsBox.ShowAll()
 }
 
-func (ki *KanjiInput) setSensitivity(krads []string) {
+func (ki *kanjiInput) setSensitivity(krads []string) {
 	radSet := make(map[string]struct{}, len(krads))
 	for _, rad := range krads {
 		radSet[rad] = struct{}{}
@@ -410,7 +410,7 @@ func (ki *KanjiInput) setSensitivity(krads []string) {
 	}
 }
 
-func (ki *KanjiInput) startDisplay() context.Context {
+func (ki *kanjiInput) startDisplay() context.Context {
 	if ki.cancelPrevious != nil {
 		ki.cancelPrevious()
 	}

@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"github.com/ianprime0509/gjisho/kanjivg"
 )
 
-// KanjiDetails is a modal window showing additional details about a kanji.
-type KanjiDetails struct {
+// kanjiDetailsModal is a modal window showing additional details about a kanji.
+type kanjiDetailsModal struct {
 	window                    *gtk.Window
 	scrolledWindow            *gtk.ScrolledWindow
 	strokeOrderScrolledWindow *gtk.ScrolledWindow
@@ -28,13 +28,13 @@ type KanjiDetails struct {
 	cancelPrevious            context.CancelFunc
 }
 
-// FetchAndDisplay fetches additional information about the given kanji and
+// fetchAndDisplay fetches additional information about the given kanji and
 // displays it in the window (which is then shown).
-func (kd *KanjiDetails) FetchAndDisplay(c kanjidic.Character) {
+func (kd *kanjiDetailsModal) fetchAndDisplay(c kanjidic.Character) {
 	ctx := kd.startDisplay()
 	ch := make(chan kanjivg.Kanji)
 	go func() {
-		if k, err := strokeDict.Fetch(c.Literal); err == nil {
+		if k, err := db.KanjiVG.Fetch(c.Literal); err == nil {
 			ch <- k
 		} else {
 			log.Printf("Could not fetch kanji stroke information for %q: %v", c.Literal, err)
@@ -51,23 +51,23 @@ func (kd *KanjiDetails) FetchAndDisplay(c kanjidic.Character) {
 	}()
 }
 
-func (kd *KanjiDetails) display(c kanjidic.Character, k kanjivg.Kanji) {
+func (kd *kanjiDetailsModal) display(c kanjidic.Character, k kanjivg.Kanji) {
 	kd.charLabel.SetText(c.Literal)
 	kd.drawStrokes(k)
 	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-	RemoveChildren(&kd.readingMeanings.Container)
+	removeChildren(&kd.readingMeanings.Container)
 	for _, rm := range c.ReadingMeaningGroups {
 		kd.readingMeanings.Add(newReadingMeaningLabel(rm))
 	}
 	kd.readingMeanings.ShowAll()
 	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
 	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
-	ScrollToStart(kd.scrolledWindow)
-	ScrollToStart(kd.strokeOrderScrolledWindow)
+	scrollToStart(kd.scrolledWindow)
+	scrollToStart(kd.strokeOrderScrolledWindow)
 	kd.window.Present()
 }
 
-func (kd *KanjiDetails) startDisplay() context.Context {
+func (kd *kanjiDetailsModal) startDisplay() context.Context {
 	if kd.cancelPrevious != nil {
 		kd.cancelPrevious()
 	}
@@ -76,7 +76,7 @@ func (kd *KanjiDetails) startDisplay() context.Context {
 	return ctx
 }
 
-func (kd *KanjiDetails) drawStrokes(kanji kanjivg.Kanji) {
+func (kd *kanjiDetailsModal) drawStrokes(kanji kanjivg.Kanji) {
 	drawTo := func(n int) *gtk.DrawingArea {
 		da, _ := gtk.DrawingAreaNew()
 		da.SetSizeRequest(54, 54)
@@ -97,7 +97,7 @@ func (kd *KanjiDetails) drawStrokes(kanji kanjivg.Kanji) {
 		return da
 	}
 
-	RemoveChildren(&kd.strokeOrder.Container)
+	removeChildren(&kd.strokeOrder.Container)
 	for i := range kanji.Strokes {
 		kd.strokeOrder.Add(drawTo(i))
 	}

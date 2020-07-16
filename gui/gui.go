@@ -1,4 +1,7 @@
-package main
+//go:generate go run github.com/go-bindata/go-bindata/go-bindata -ignore .*~ -nometadata -pkg gui data/
+
+// Package gui contains the GUI interface to GJisho.
+package gui
 
 import (
 	"log"
@@ -9,41 +12,38 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/ianprime0509/gjisho/jmdict"
-	"github.com/ianprime0509/gjisho/kanjidic"
-	"github.com/ianprime0509/gjisho/kanjivg"
-	"github.com/ianprime0509/gjisho/kradfile"
-	"github.com/ianprime0509/gjisho/tatoeba"
+	"github.com/ianprime0509/gjisho/dictdb"
 )
 
 const appID = "com.github.ianprime0509.gjisho"
 
 var aboutDialog *gtk.AboutDialog
 
-var searchResults = new(SearchResultList)
-var searchResultsKanji = new(SearchResultsKanji)
-var kanjiInput = new(KanjiInput)
-var search = &Search{results: searchResults, resultsKanji: searchResultsKanji, kanjiInput: kanjiInput}
-var kanjiList = new(KanjiList)
-var kanjiDetails = new(KanjiDetails)
-var exampleList = new(ExampleList)
-var exampleDetails = new(ExampleDetails)
-var entryDisplay = &EntryDisplay{kanjiList: kanjiList, exampleList: exampleList}
-var navigation = &EntryNavigation{disp: entryDisplay}
+var search = &appSearch{
+	results:      new(searchResultList),
+	resultsKanji: new(searchResultsKanji),
+	kanjiInput:   new(kanjiInput),
+}
+var navigation = &entryNavigation{disp: &entryDisplay{
+	kanji:    new(kanjiList),
+	examples: new(exampleList),
+}}
+var kanjiDetails = new(kanjiDetailsModal)
+var exampleDetails = new(exampleDetailsModal)
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":                      &aboutDialog,
 	"backButton":                       &navigation.backButton,
 	"entryContentStack":                &navigation.contentStack,
-	"entryDetailsLabel":                &entryDisplay.detailsLabel,
-	"entryScrolledWindow":              &entryDisplay.scrolledWindow,
+	"entryDetailsLabel":                &navigation.disp.detailsLabel,
+	"entryScrolledWindow":              &navigation.disp.scrolledWindow,
 	"exampleDetailsEnglishLabel":       &exampleDetails.englishLabel,
 	"exampleDetailsJapaneseLabel":      &exampleDetails.japaneseLabel,
 	"exampleDetailsScrolledWindow":     &exampleDetails.scrolledWindow,
 	"exampleDetailsWindow":             &exampleDetails.window,
 	"exampleDetailsWordsList":          &exampleDetails.wordsList,
-	"examplesList":                     &exampleList.list,
-	"examplesScrolledWindow":           &exampleList.scrolledWindow,
+	"examplesList":                     &navigation.disp.examples.list,
+	"examplesScrolledWindow":           &navigation.disp.examples.scrolledWindow,
 	"forwardButton":                    &navigation.forwardButton,
 	"kanjiDetailsCharacterLabel":       &kanjiDetails.charLabel,
 	"kanjiDetailsDictRefsLabel":        &kanjiDetails.dictRefsLabel,
@@ -53,29 +53,29 @@ var appComponents = map[string]interface{}{
 	"kanjiDetailsSubtitleLabel":        &kanjiDetails.subtitleLabel,
 	"kanjiDetailsQueryCodesLabel":      &kanjiDetails.queryCodesLabel,
 	"kanjiDetailsWindow":               &kanjiDetails.window,
-	"kanjiInputButton":                 &kanjiInput.button,
-	"kanjiInputButtonIcon":             &kanjiInput.buttonIcon,
-	"kanjiInputPopover":                &kanjiInput.popover,
-	"kanjiInputRadicals":               &kanjiInput.radicalsBox,
-	"kanjiInputRadicalsScrolledWindow": &kanjiInput.radicalsScrolledWindow,
-	"kanjiInputResults":                &kanjiInput.resultsBox,
-	"kanjiInputResultsScrolledWindow":  &kanjiInput.resultsScrolledWindow,
-	"kanaWritingsLabel":                &entryDisplay.kanaWritingsLabel,
-	"kanjiList":                        &kanjiList.list,
-	"kanjiScrolledWindow":              &kanjiList.scrolledWindow,
-	"kanjiWritingsLabel":               &entryDisplay.kanjiWritingsLabel,
+	"kanjiInputButton":                 &search.kanjiInput.button,
+	"kanjiInputButtonIcon":             &search.kanjiInput.buttonIcon,
+	"kanjiInputPopover":                &search.kanjiInput.popover,
+	"kanjiInputRadicals":               &search.kanjiInput.radicalsBox,
+	"kanjiInputRadicalsScrolledWindow": &search.kanjiInput.radicalsScrolledWindow,
+	"kanjiInputResults":                &search.kanjiInput.resultsBox,
+	"kanjiInputResultsScrolledWindow":  &search.kanjiInput.resultsScrolledWindow,
+	"kanaWritingsLabel":                &navigation.disp.kanaWritingsLabel,
+	"kanjiList":                        &navigation.disp.kanji.list,
+	"kanjiScrolledWindow":              &navigation.disp.kanji.scrolledWindow,
+	"kanjiWritingsLabel":               &navigation.disp.kanjiWritingsLabel,
 	"moreInfoRevealer":                 &navigation.moreInfoRevealer,
 	"moreInfoToggleButton":             &navigation.moreInfoToggleButton,
-	"primaryKanaLabel":                 &entryDisplay.primaryKanaLabel,
-	"primaryKanjiLabel":                &entryDisplay.primaryKanjiLabel,
+	"primaryKanaLabel":                 &navigation.disp.primaryKanaLabel,
+	"primaryKanjiLabel":                &navigation.disp.primaryKanjiLabel,
 	"searchEntry":                      &search.entry,
 	"searchRevealer":                   &search.revealer,
-	"searchResults":                    &searchResults.list,
-	"searchResultsKanji":               &searchResultsKanji.box,
-	"searchResultsScrolledWindow":      &searchResults.scrolledWindow,
+	"searchResults":                    &search.results.list,
+	"searchResultsKanji":               &search.resultsKanji.box,
+	"searchResultsScrolledWindow":      &search.results.scrolledWindow,
 	"searchToggleButton":               &search.toggle,
 	"strokeOrderScrolledWindow":        &kanjiDetails.strokeOrderScrolledWindow,
-	"writingsScrolledWindow":           &entryDisplay.writingsScrolledWindow,
+	"writingsScrolledWindow":           &navigation.disp.writingsScrolledWindow,
 }
 
 var signals = map[string]interface{}{
@@ -85,123 +85,95 @@ var signals = map[string]interface{}{
 			log.Printf("Invalid URL: %v", uri)
 			return true
 		}
-		search.results.ClearSelection()
-		return navigation.FollowLink(url)
+		search.results.clearSelection()
+		return navigation.followLink(url)
 	},
 	"exampleDetailsWordActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
-		search.results.ClearSelection()
-		navigation.GoTo(exampleDetails.words[row.GetIndex()].ID)
-		exampleDetails.Close()
+		search.results.clearSelection()
+		navigation.goTo(exampleDetails.words[row.GetIndex()].ID)
+		exampleDetails.close()
 	},
 	"examplesEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
 		if pos == gtk.POS_BOTTOM {
-			exampleList.ShowMore()
+			navigation.disp.examples.showMore()
 		}
 	},
 	"exampleListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
-		exampleDetails.FetchAndDisplay(exampleList.examples[row.GetIndex()])
+		exampleDetails.fetchAndDisplay(navigation.disp.examples.examples[row.GetIndex()])
 	},
 	"hideWidget":  func(w interface{ Hide() }) { w.Hide() },
 	"inhibitNext": func() bool { return true },
 	"kanjiListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
-		kanjiDetails.FetchAndDisplay(kanjiList.kanji[row.GetIndex()])
+		kanjiDetails.fetchAndDisplay(navigation.disp.kanji.kanji[row.GetIndex()])
 	},
 	"kanjiInputButtonToggled": func(b *gtk.ToggleButton) {
 		if b.GetActive() {
-			kanjiInput.Display()
+			search.kanjiInput.display()
 		}
 	},
 	"kanjiInputPopoverClosed": func() {
-		kanjiInput.button.SetActive(false)
+		search.kanjiInput.button.SetActive(false)
 	},
 	"kanjiInputResultsChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {
-		search.InsertEntryText(kanjiInput.results[child.GetIndex()].Literal)
+		search.insertEntryText(search.kanjiInput.results[child.GetIndex()].Literal)
 	},
-	"moreInfoToggle":  navigation.ToggleMoreInfo,
-	"navigateBack":    navigation.GoBack,
-	"navigateForward": navigation.GoForward,
+	"moreInfoToggle":  navigation.toggleMoreInfo,
+	"navigateBack":    navigation.goBack,
+	"navigateForward": navigation.goForward,
 	"searchChanged": func(entry *gtk.SearchEntry) {
 		query, _ := entry.GetText()
-		search.Search(query)
+		search.search(query)
 	},
-	"searchEntryKeyPress": AdaptKeyHandler(searchEntryKeyMap),
+	"searchEntryKeyPress": adaptKeyHandler(searchEntryKeyMap),
 	"searchResultsEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
 		if pos == gtk.POS_BOTTOM {
-			searchResults.ShowMore()
+			search.results.showMore()
 		}
 	},
 	"searchResultsKanjiChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {
-		kanjiDetails.FetchAndDisplay(searchResultsKanji.kanji[child.GetIndex()])
+		kanjiDetails.fetchAndDisplay(search.resultsKanji.kanji[child.GetIndex()])
 	},
 	"searchResultsRowSelected": func() {
-		sel := searchResults.Selected()
+		sel := search.results.selected()
 		if sel == nil {
 			return
 		}
-		navigation.GoTo(sel.ID)
+		navigation.goTo(sel.ID)
 	},
-	"searchToggle":      search.Toggle,
-	"windowButtonPress": AdaptButtonHandler(windowButtonMap),
-	"windowKeyPress":    AdaptKeyHandler(windowKeyMap),
+	"searchToggle":      search.toggleOpen,
+	"windowButtonPress": adaptButtonHandler(windowButtonMap),
+	"windowKeyPress":    adaptKeyHandler(windowKeyMap),
 }
 
-var searchEntryKeyMap = KeyMap{
-	Key{gdk.KEY_Escape, 0}: search.Deactivate,
+var searchEntryKeyMap = keyMap{
+	key{gdk.KEY_Escape, 0}: search.deactivateEntry,
 }
 
-var windowKeyMap = KeyMap{
-	Key{gdk.KEY_f, gdk.GDK_CONTROL_MASK}: search.Activate,
+var windowKeyMap = keyMap{
+	key{gdk.KEY_f, gdk.GDK_CONTROL_MASK}: search.activateEntry,
 }
 
-var windowButtonMap = ButtonMap{
-	Button{8, 0}: func() {
-		search.results.ClearSelection()
-		navigation.GoBack()
+var windowButtonMap = buttonMap{
+	button{8, 0}: func() {
+		search.results.clearSelection()
+		navigation.goBack()
 	},
-	Button{9, 0}: func() {
-		search.results.ClearSelection()
-		navigation.GoForward()
+	button{9, 0}: func() {
+		search.results.clearSelection()
+		navigation.goForward()
 	},
 }
 
-var dict *jmdict.JMdict
-var kanjiDict *kanjidic.KANJIDIC
-var radicalDict *kradfile.KRADFILE
-var exampleDict *tatoeba.Tatoeba
-var strokeDict *kanjivg.KanjiVG
+var db *dictdb.DB
 
 // LaunchGUI launches the application user interface, passing the given
 // arguments to GTK. It does not return an error; if any errors occur here, the
 // program will terminate.
 func LaunchGUI(args []string) {
-	db, err := OpenDB()
+	var err error
+	db, err = dictdb.Open()
 	if err != nil {
 		log.Fatalf("Could not open database: %v", err)
-	}
-
-	dict, err = jmdict.New(db)
-	if err != nil {
-		log.Fatalf("Could not open JMdict handler: %v", err)
-	}
-
-	kanjiDict, err = kanjidic.New(db)
-	if err != nil {
-		log.Fatalf("Could not open KANJIDIC handler: %v", err)
-	}
-
-	radicalDict, err = kradfile.New(db)
-	if err != nil {
-		log.Fatalf("Could not open KRADFILE handler: %v", err)
-	}
-
-	exampleDict, err = tatoeba.New(db)
-	if err != nil {
-		log.Fatalf("Could not open Tatoeba handler: %v", err)
-	}
-
-	strokeDict, err = kanjivg.New(db)
-	if err != nil {
-		log.Fatalf("Could not open KanjiVG handler: %v", err)
 	}
 
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
@@ -252,13 +224,13 @@ func onActivate(app *gtk.Application) {
 		log.Fatalf("Could not process kanji icon data: %v", err)
 	}
 
-	search.kanjiInput.InitRadicals()
+	search.kanjiInput.initRadicals()
 
 	window.Show()
 
 	height := search.entry.GetAllocatedHeight() * 3 / 5
 	kanjiIcon, _ = kanjiIcon.ScaleSimple(height, height, gdk.INTERP_BILINEAR)
-	kanjiInput.buttonIcon.SetFromPixbuf(kanjiIcon)
+	search.kanjiInput.buttonIcon.SetFromPixbuf(kanjiIcon)
 }
 
 func getAppComponents(builder *gtk.Builder) {
