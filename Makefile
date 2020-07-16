@@ -43,6 +43,10 @@ GJISHO_SOURCES=\
 	gui/search.go \
 	gui/util.go
 
+GUI_BINDATA_SOURCES=\
+	gui/data/gjisho.glade \
+	gui/data/kanji-icon.png
+
 GJISHO_CLI_SOURCES=\
 	cmd/gjisho-cli/gjisho-cli.go \
 	${COMMON_SOURCES}
@@ -75,8 +79,8 @@ install-programs: ${GJISHO} ${GJISHO_CLI} gjisho.desktop
 	mkdir -p '${DESTDIR}${PREFIX}/share/applications'
 	cp gjisho.desktop '${DESTDIR}${PREFIX}/share/applications'
 
-bindata.go: data/gjisho.glade
-	${GO} generate
+gui/bindata.go: ${GUI_BINDATA_SOURCES}
+	${GO} generate ./gui
 
 ${GJISHO}: ${GJISHO_SOURCES}
 	cd cmd/gjisho && ${GO} build -tags fts5
