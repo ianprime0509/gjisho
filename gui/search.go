@@ -288,9 +288,14 @@ func (ki *kanjiInput) initRadicals() {
 			b, _ := gtk.FlowBoxChildNew()
 			b.Add(lbl)
 			ki.radicalButtons[rad] = b
+			b.Connect("focus", func() {
+				fby := fb.GetAllocation().GetY()
+				by := b.GetAllocation().GetY()
+				ki.radicalsScrolledWindow.GetVAdjustment().SetValue(float64(fby + by))
+			})
 			fb.Add(b)
-			// Why can't I just use the activate signal on b itself? GTK is so
-			// stupid sometimes.
+			// Why can't I just use the activate signal on b itself? When I do
+			// so, it works via keyboard activation but not on click.
 			fb.Connect("child-activated", func(_ interface{}, child *gtk.FlowBoxChild) {
 				if child.GetIndex() == b.GetIndex() && b.GetSensitive() {
 					ki.toggleRadical(rad)
@@ -393,6 +398,10 @@ func (ki *kanjiInput) setResults(kanji []kradfile.Kanji) {
 		b, _ := gtk.FlowBoxChildNew()
 		b.Add(lbl)
 		ki.resultsBox.Add(b)
+		b.Connect("focus", func() {
+			by := b.GetAllocation().GetY()
+			ki.resultsScrolledWindow.GetVAdjustment().SetValue(float64(by))
+		})
 	}
 	ki.results = kanji
 	ki.resultsBox.ShowAll()
