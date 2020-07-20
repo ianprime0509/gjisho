@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/url"
 	"strings"
 
 	"github.com/gotk3/gotk3/glib"
@@ -29,22 +28,14 @@ type entryNavigation struct {
 	cancelPrevious       context.CancelFunc // a function to cancel the previous navigation operation
 }
 
-// followLink attempts to follow the given link and returns whether it was able
-// to do so.
-func (n *entryNavigation) followLink(link *url.URL) bool {
-	if link.Scheme != "entry" {
-		return false
-	}
-
-	if match, err := db.JMdict.LookupByRef(link.Host); err == nil {
-		// If I try to call GoTo directly, then for some reason the program
-		// crashes (probably because the link text gets freed or otherwise
-		// corrupted after navigation)
-		glib.IdleAdd(func() { n.goTo(match.ID) })
+// goToRef attempts to look up the entry using the given reference and navigate
+// to it.
+func (n *entryNavigation) goToRef(ref string) {
+	if match, err := db.JMdict.LookupByRef(ref); err == nil {
+		n.goTo(match.ID)
 	} else {
-		log.Printf("Error fetching entry for link %v: %v", link, err)
+		log.Printf("Error fetching entry for reference %q: %v", ref, err)
 	}
-	return true
 }
 
 // goTo navigates to the entry with the given ID.
@@ -287,7 +278,7 @@ func fmtSenses(senses []jmdict.Sense) string {
 }
 
 func fmtEntryRef(entry string) string {
-	return fmt.Sprintf("<a href=\"entry://%s\">%[1]s</a>", entry)
+	return fmt.Sprintf("<a href=\"gjisho://entry/%s\">%[1]s</a>", entry)
 }
 
 // kanjiList is an overview list of kanji associated with an entry.

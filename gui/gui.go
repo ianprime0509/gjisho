@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -85,8 +86,19 @@ var signals = map[string]interface{}{
 			log.Printf("Invalid URL: %v", uri)
 			return true
 		}
-		search.results.clearSelection()
-		return navigation.followLink(url)
+		if url.Scheme != "gjisho" {
+			return false
+		}
+
+		path := strings.TrimLeft(url.Path, "/")
+		switch url.Host {
+		case "entry":
+			search.results.clearSelection()
+			glib.IdleAdd(func() { navigation.goToRef(path) })
+			return true
+		default:
+			return false
+		}
 	},
 	"exampleDetailsWordActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 		search.results.clearSelection()
