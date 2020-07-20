@@ -248,7 +248,7 @@ Use the search button to search for words and kanji.</property>
                             <child>
                               <object class="GtkLabel" id="primaryKanaLabel">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
+                                <property name="can_focus">True</property>
                                 <property name="selectable">True</property>
                                 <attributes>
                                   <attribute name="scale" value="1.2"/>
@@ -266,7 +266,7 @@ Use the search button to search for words and kanji.</property>
                             <child>
                               <object class="GtkLabel" id="primaryKanjiLabel">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
+                                <property name="can_focus">True</property>
                                 <property name="selectable">True</property>
                                 <attributes>
                                   <attribute name="scale" value="1.728"/>
@@ -284,7 +284,7 @@ Use the search button to search for words and kanji.</property>
                             <child>
                               <object class="GtkLabel" id="entryDetailsLabel">
                                 <property name="visible">True</property>
-                                <property name="can_focus">False</property>
+                                <property name="can_focus">True</property>
                                 <property name="margin_start">5</property>
                                 <property name="margin_end">5</property>
                                 <property name="margin_top">10</property>
@@ -403,7 +403,7 @@ Use the search button to search for words and kanji.</property>
                                     <child>
                                       <object class="GtkLabel" id="kanjiWritingsLabel">
                                         <property name="visible">True</property>
-                                        <property name="can_focus">False</property>
+                                        <property name="can_focus">True</property>
                                         <property name="margin_start">5</property>
                                         <property name="wrap">True</property>
                                         <property name="selectable">True</property>
@@ -440,7 +440,7 @@ Use the search button to search for words and kanji.</property>
                                     <child>
                                       <object class="GtkLabel" id="kanaWritingsLabel">
                                         <property name="visible">True</property>
-                                        <property name="can_focus">False</property>
+                                        <property name="can_focus">True</property>
                                         <property name="margin_start">5</property>
                                         <property name="wrap">True</property>
                                         <property name="selectable">True</property>
@@ -777,7 +777,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 <child>
                   <object class="GtkLabel" id="exampleDetailsJapaneseLabel">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can_focus">True</property>
                     <property name="margin_start">5</property>
                     <property name="margin_end">5</property>
                     <property name="wrap">True</property>
@@ -796,7 +796,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 <child>
                   <object class="GtkLabel" id="exampleDetailsEnglishLabel">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can_focus">True</property>
                     <property name="margin_start">5</property>
                     <property name="margin_end">5</property>
                     <property name="wrap">True</property>
@@ -874,10 +874,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
                 <child>
                   <object class="GtkLabel" id="kanjiDetailsCharacterLabel">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can_focus">True</property>
                     <property name="justify">center</property>
                     <property name="selectable">True</property>
                     <attributes>
@@ -927,7 +928,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 <child>
                   <object class="GtkLabel" id="kanjiDetailsSubtitleLabel">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can_focus">True</property>
                     <property name="justify">center</property>
                     <property name="selectable">True</property>
                   </object>
@@ -938,21 +939,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkBox" id="kanjiDetailsReadingMeanings">
+                  <object class="GtkLabel" id="kanjiDetailsReadingMeanings">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can_focus">True</property>
                     <property name="margin_start">5</property>
                     <property name="margin_end">5</property>
-                    <property name="orientation">vertical</property>
-                    <property name="spacing">5</property>
-                    <child>
-                      <placeholder/>
-                    </child>
+                    <property name="wrap">True</property>
+                    <property name="selectable">True</property>
+                    <property name="xalign">0</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="padding">5</property>
                     <property name="position">3</property>
                   </packing>
                 </child>
@@ -963,7 +961,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     <child>
                       <object class="GtkLabel" id="kanjiDetailsDictRefsLabel">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can_focus">True</property>
                         <property name="margin_start">5</property>
                         <property name="margin_end">5</property>
                         <property name="selectable">True</property>
@@ -992,7 +990,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     <child>
                       <object class="GtkLabel" id="kanjiDetailsQueryCodesLabel">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can_focus">True</property>
                         <property name="margin_start">5</property>
                         <property name="margin_end">5</property>
                         <property name="selectable">True</property>

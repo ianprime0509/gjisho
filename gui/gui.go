@@ -228,7 +228,7 @@ func onActivate(app *gtk.Application) {
 
 	search.kanjiInput.initRadicals()
 
-	window.Show()
+	window.Present()
 
 	kanjiIconLoader, _ := gdk.PixbufLoaderNew()
 	height := search.entry.GetAllocatedHeight() * 3 / 5

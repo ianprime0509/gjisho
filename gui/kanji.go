@@ -22,7 +22,7 @@ type kanjiDetailsModal struct {
 	strokeOrder               *gtk.Box
 	charLabel                 *gtk.Label
 	subtitleLabel             *gtk.Label
-	readingMeanings           *gtk.Box
+	readingMeanings           *gtk.Label
 	dictRefsLabel             *gtk.Label
 	queryCodesLabel           *gtk.Label
 	cancelPrevious            context.CancelFunc
@@ -55,10 +55,12 @@ func (kd *kanjiDetailsModal) display(c kanjidic.Character, k kanjivg.Kanji) {
 	kd.charLabel.SetText(c.Literal)
 	kd.drawStrokes(k)
 	kd.subtitleLabel.SetMarkup(fmtSubtitle(c))
-	removeChildren(&kd.readingMeanings.Container)
+	sb := new(strings.Builder)
 	for _, rm := range c.ReadingMeaningGroups {
-		kd.readingMeanings.Add(newReadingMeaningLabel(rm))
+		sb.WriteString(fmtReadingMeaning(rm))
+		sb.WriteRune('\n')
 	}
+	kd.readingMeanings.SetMarkup(strings.TrimSpace(sb.String()))
 	kd.readingMeanings.ShowAll()
 	kd.dictRefsLabel.SetMarkup(fmtDictRefs(c.DictRefs))
 	kd.queryCodesLabel.SetMarkup(fmtQueryCodes(c.QueryCodes))
@@ -128,7 +130,7 @@ func fmtSubtitle(c kanjidic.Character) string {
 	return sb.String()
 }
 
-func newReadingMeaningLabel(rm kanjidic.ReadingMeaningGroup) *gtk.Label {
+func fmtReadingMeaning(rm kanjidic.ReadingMeaningGroup) string {
 	var kun, on []string
 	for _, r := range rm.Readings {
 		switch r.Type {
@@ -171,12 +173,7 @@ func newReadingMeaningLabel(rm kanjidic.ReadingMeaningGroup) *gtk.Label {
 		item++
 	}
 
-	lbl, _ := gtk.LabelNew(sb.String())
-	lbl.SetUseMarkup(true)
-	lbl.SetXAlign(0)
-	lbl.SetLineWrap(true)
-	lbl.SetSelectable(true)
-	return lbl
+	return sb.String()
 }
 
 func fmtDictRefs(refs []kanjidic.DictRef) string {

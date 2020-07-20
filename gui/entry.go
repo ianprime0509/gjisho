@@ -283,7 +283,7 @@ func fmtSenses(senses []jmdict.Sense) string {
 			sb.WriteRune('\n')
 		}
 	}
-	return sb.String()
+	return strings.TrimSpace(sb.String())
 }
 
 func fmtEntryRef(entry string) string {
