@@ -214,23 +214,34 @@ func onActivate(app *gtk.Application) {
 	aboutAction.Connect("activate", func() { aboutDialog.Present() })
 	app.AddAction(aboutAction)
 
-	kanjiIconData, err := Asset("data/kanji-icon.png")
+	logoLoader, _ := gdk.PixbufLoaderNew()
+	logoLoader.SetSize(192, 192)
+	logoData, err := Asset("data/logo.svg")
 	if err != nil {
-		log.Fatalf("Could not load kanji icon data: %v", err)
+		log.Fatalf("Could not load logo data: %v", err)
 	}
-	pbLoader, _ := gdk.PixbufLoaderNew()
-	kanjiIcon, err := pbLoader.WriteAndReturnPixbuf(kanjiIconData)
+	logoPixbuf, err := logoLoader.WriteAndReturnPixbuf(logoData)
 	if err != nil {
-		log.Fatalf("Could not process kanji icon data: %v", err)
+		log.Fatalf("Could not process logo data: %v", err)
 	}
+	aboutDialog.SetLogo(logoPixbuf)
 
 	search.kanjiInput.initRadicals()
 
 	window.Show()
 
+	kanjiIconLoader, _ := gdk.PixbufLoaderNew()
 	height := search.entry.GetAllocatedHeight() * 3 / 5
-	kanjiIcon, _ = kanjiIcon.ScaleSimple(height, height, gdk.INTERP_BILINEAR)
-	search.kanjiInput.buttonIcon.SetFromPixbuf(kanjiIcon)
+	kanjiIconLoader.SetSize(height, height)
+	kanjiIconData, err := Asset("data/kanji-icon.svg")
+	if err != nil {
+		log.Fatalf("Could not load kanji icon data: %v", err)
+	}
+	kanjiIconPixbuf, err := kanjiIconLoader.WriteAndReturnPixbuf(kanjiIconData)
+	if err != nil {
+		log.Fatalf("Could not process kanji icon data: %v", err)
+	}
+	search.kanjiInput.buttonIcon.SetFromPixbuf(kanjiIconPixbuf)
 }
 
 func getAppComponents(builder *gtk.Builder) {

@@ -7,3 +7,4 @@
 /cmd/gjisho/gjisho
 /cmd/gjisho-cli/gjisho-cli
 /gjisho.sqlite
+/gui/data/logo.svg
