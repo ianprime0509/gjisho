@@ -12,6 +12,7 @@ GJISHO_CLI=cmd/gjisho-cli/gjisho-cli
 
 CONVERT=convert
 CURL=curl
+GDBUS_CODEGEN=gdbus-codegen
 GO=go
 GZIP=gzip
 
@@ -35,9 +36,14 @@ COMMON_SOURCES=\
 	kradfile/kradfile.go kradfile/radstrokes.go \
 	tatoeba/tatoeba.go
 
+SEARCH_PROVIDER_SKELETON=\
+	gui/shell-search-provider2.h \
+	gui/shell-search-provider2.c
+
 GJISHO_SOURCES=\
 	cmd/gjisho/gjisho.go \
 	${COMMON_SOURCES} \
+	${SEARCH_PROVIDER_SKELETON} \
 	gui/bindata.go \
 	gui/entry.go \
 	gui/event.go \
@@ -45,7 +51,10 @@ GJISHO_SOURCES=\
 	gui/gui.go \
 	gui/kanji.go \
 	gui/search.go \
-	gui/util.go
+	gui/search-provider.go \
+	gui/util.go \
+	gui/application.h \
+	gui/application.c
 
 GUI_BINDATA_SOURCES=\
 	gui/data/gjisho.glade \
@@ -62,7 +71,8 @@ check: ${GJISHO_SOURCES} ${GJISHO_CLI_SOURCES}
 	${GO} test ./...
 
 clean:
-	rm -f ${GJISHO} ${GJISHO_CLI} gjisho.sqlite
+	rm -f ${GJISHO} ${GJISHO_CLI} gjisho.sqlite \
+		${SEARCH_PROVIDER_SKELETON} gui/bindata.go gui/data/logo.svg
 
 fetch:
 	${CURL} -L ${TATOEBA_URL} | ${GZIP} -d >'${TATOEBA_FILE}'
@@ -77,7 +87,7 @@ install-database: gjisho.sqlite
 	mkdir -p '${DESTDIR}${PREFIX}/share/gjisho'
 	cp gjisho.sqlite '${DESTDIR}${PREFIX}/share/gjisho'
 
-install-programs: ${GJISHO} ${GJISHO_CLI} ${APP_ID}.desktop ${APP_ID}.service
+install-programs: ${GJISHO} ${GJISHO_CLI} ${APP_ID}.desktop ${APP_ID}.service ${APP_ID}.search-provider.ini
 	mkdir -p '${DESTDIR}${PREFIX}/bin'
 	cp ${GJISHO} '${DESTDIR}${PREFIX}/bin'
 	cp ${GJISHO_CLI} '${DESTDIR}${PREFIX}/bin'
@@ -91,6 +101,8 @@ install-programs: ${GJISHO} ${GJISHO_CLI} ${APP_ID}.desktop ${APP_ID}.service
 	done
 	mkdir -p '${DESTDIR}${PREFIX}/share/dbus-1/services'
 	sed 's_%BIN%_${DESTDIR}${PREFIX}/bin/gjisho_' ${APP_ID}.service >'${DESTDIR}${PREFIX}/share/dbus-1/services/${APP_ID}.service'
+	mkdir -p '${DESTDIR}${PREFIX}/share/gnome-shell/search-providers'
+	cp ${APP_ID}.search-provider.ini '${DESTDIR}${PREFIX}/share/gnome-shell/search-providers'
 
 programs: ${GJISHO} ${GJISHO_CLI}
 
@@ -99,6 +111,14 @@ gui/bindata.go: ${GUI_BINDATA_SOURCES}
 
 gui/data/logo.svg: logo.svg
 	cp logo.svg gui/data/logo.svg
+
+${SEARCH_PROVIDER_SKELETON}: org.gnome.ShellSearchProvider2.xml
+	${GDBUS_CODEGEN} \
+		--c-namespace Shell \
+		--generate-c-code shell-search-provider2 \
+		--interface-prefix org.gnome.Shell. \
+		org.gnome.ShellSearchProvider2.xml
+	mv shell-search-provider2.h shell-search-provider2.c gui
 
 ${GJISHO}: ${GJISHO_SOURCES}
 	cd cmd/gjisho && ${GO} build -tags fts5

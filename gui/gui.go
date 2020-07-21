@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/gotk3/gotk3/gdk"
@@ -18,6 +19,8 @@ import (
 
 const appID = "xyz.ianjohnson.GJisho"
 
+var app *application
+var appWindow *gtk.ApplicationWindow
 var aboutDialog *gtk.AboutDialog
 
 var search = &appSearch{
@@ -34,6 +37,7 @@ var exampleDetails = new(exampleDetailsModal)
 
 var appComponents = map[string]interface{}{
 	"aboutDialog":                      &aboutDialog,
+	"appWindow":                        &appWindow,
 	"backButton":                       &navigation.backButton,
 	"entryContentStack":                &navigation.contentStack,
 	"entryDetailsLabel":                &navigation.disp.detailsLabel,
@@ -182,16 +186,17 @@ var db *dictdb.DB
 // arguments to GTK. It does not return an error; if any errors occur here, the
 // program will terminate.
 func LaunchGUI(args []string) {
-	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
+	var err error
+	app, err = applicationNew()
 	if err != nil {
 		log.Fatalf("Could not create application: %v", err)
 	}
 
-	_, err = app.Connect("startup", onStartup, app)
+	_, err = app.Connect("startup", onStartup)
 	if err != nil {
 		log.Fatalf("Could not connect startup signal: %v", err)
 	}
-	_, err = app.Connect("activate", onActivate, app)
+	_, err = app.Connect("activate", onActivate)
 	if err != nil {
 		log.Fatalf("Could not connect activate signal: %v", err)
 	}
@@ -199,15 +204,25 @@ func LaunchGUI(args []string) {
 	os.Exit(app.Run(args))
 }
 
-func onStartup(app *gtk.Application) {
+func onStartup() {
 	var err error
 	db, err = dictdb.Open()
 	if err != nil {
 		log.Fatalf("Could not open database: %v", err)
 	}
-}
 
-func onActivate(app *gtk.Application) {
+	aboutAction := glib.SimpleActionNew("about", nil)
+	aboutAction.Connect("activate", func() { aboutDialog.Present() })
+	app.AddAction(aboutAction)
+
+	navigateAction := glib.SimpleActionNew("navigate", glib.VARIANT_TYPE_STRING)
+	navigateAction.Connect("activate", onNavigate)
+	app.AddAction(navigateAction)
+
+	searchAction := glib.SimpleActionNew("search", glib.VARIANT_TYPE_STRING)
+	searchAction.Connect("activate", onSearch)
+	app.AddAction(searchAction)
+
 	builderData, err := Asset("data/gjisho.glade")
 	if err != nil {
 		log.Fatalf("Could not load GUI builder data: %v", err)
@@ -219,18 +234,11 @@ func onActivate(app *gtk.Application) {
 	if err := builder.AddFromString(string(builderData)); err != nil {
 		log.Fatalf("Could not load data for application builder: %v", err)
 	}
-	windowObj, err := builder.GetObject("appWindow")
-	if err != nil {
-		log.Fatalf("Could not get application window: %v", err)
-	}
 	getAppComponents(builder)
 	builder.ConnectSignals(signals)
-	window := windowObj.(*gtk.ApplicationWindow)
-	app.AddWindow(window)
+	app.AddWindow(appWindow)
 
-	aboutAction := glib.SimpleActionNew("about", nil)
-	aboutAction.Connect("activate", func() { aboutDialog.Present() })
-	app.AddAction(aboutAction)
+	search.kanjiInput.initRadicals()
 
 	logoLoader, _ := gdk.PixbufLoaderNew()
 	logoLoader.SetSize(192, 192)
@@ -244,13 +252,8 @@ func onActivate(app *gtk.Application) {
 	}
 	aboutDialog.SetLogo(logoPixbuf)
 
-	search.kanjiInput.initRadicals()
-
-	window.Present()
-
 	kanjiIconLoader, _ := gdk.PixbufLoaderNew()
-	height := search.entry.GetAllocatedHeight() * 3 / 5
-	kanjiIconLoader.SetSize(height, height)
+	kanjiIconLoader.SetSize(24, 24)
 	kanjiIconData, err := Asset("data/kanji-icon.svg")
 	if err != nil {
 		log.Fatalf("Could not load kanji icon data: %v", err)
@@ -260,6 +263,25 @@ func onActivate(app *gtk.Application) {
 		log.Fatalf("Could not process kanji icon data: %v", err)
 	}
 	search.kanjiInput.buttonIcon.SetFromPixbuf(kanjiIconPixbuf)
+}
+
+func onActivate() {
+	appWindow.Present()
+}
+
+func onNavigate(idStr string) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("Invalid ID for navigation: %v", idStr)
+		return
+	}
+
+	navigation.goTo(id)
+}
+
+func onSearch(query string) {
+	search.activateEntry()
+	search.entry.Entry.SetText(query)
 }
 
 func getAppComponents(builder *gtk.Builder) {

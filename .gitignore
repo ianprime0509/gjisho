@@ -8,4 +8,5 @@ bindata.go
 /cmd/gjisho/gjisho
 /cmd/gjisho-cli/gjisho-cli
 /gjisho.sqlite
+/gui/shell-search-provider2.[ch]
 /gui/data/logo.svg
