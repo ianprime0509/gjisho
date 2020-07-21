@@ -44,7 +44,9 @@ func Open() (*DB, error) {
 	}
 
 	lookupDirs := []string{dataHome}
-	lookupDirs = append(lookupDirs, strings.Split(dataDirs, ":")...)
+	if len(dataDirs) > 0 {
+		lookupDirs = append(lookupDirs, strings.Split(dataDirs, ":")...)
+	}
 	for _, dir := range lookupDirs {
 		path := filepath.Join(dir, "gjisho", "gjisho.sqlite")
 		if _, err := os.Stat(path); !os.IsNotExist(err) {

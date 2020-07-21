@@ -182,23 +182,29 @@ var db *dictdb.DB
 // arguments to GTK. It does not return an error; if any errors occur here, the
 // program will terminate.
 func LaunchGUI(args []string) {
-	var err error
-	db, err = dictdb.Open()
-	if err != nil {
-		log.Fatalf("Could not open database: %v", err)
-	}
-
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		log.Fatalf("Could not create application: %v", err)
 	}
 
+	_, err = app.Connect("startup", onStartup, app)
+	if err != nil {
+		log.Fatalf("Could not connect startup signal: %v", err)
+	}
 	_, err = app.Connect("activate", onActivate, app)
 	if err != nil {
-		log.Fatalf("Could not connect activation signal: %v", err)
+		log.Fatalf("Could not connect activate signal: %v", err)
 	}
 
 	os.Exit(app.Run(args))
+}
+
+func onStartup(app *gtk.Application) {
+	var err error
+	db, err = dictdb.Open()
+	if err != nil {
+		log.Fatalf("Could not open database: %v", err)
+	}
 }
 
 func onActivate(app *gtk.Application) {
