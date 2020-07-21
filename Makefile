@@ -1,9 +1,11 @@
 .POSIX:
 .SUFFIXES:
-.PHONY: all check clean fetch install install-program install-database
+.PHONY: all check clean fetch install install-program install-database programs
 
 PREFIX=/usr/local
 ICON_DIR=${PREFIX}/share/icons
+
+APP_ID=xyz.ianjohnson.GJisho
 
 GJISHO=cmd/gjisho/gjisho
 GJISHO_CLI=cmd/gjisho-cli/gjisho-cli
@@ -75,18 +77,22 @@ install-database: gjisho.sqlite
 	mkdir -p '${DESTDIR}${PREFIX}/share/gjisho'
 	cp gjisho.sqlite '${DESTDIR}${PREFIX}/share/gjisho'
 
-install-programs: ${GJISHO} ${GJISHO_CLI} gjisho.desktop
+install-programs: ${GJISHO} ${GJISHO_CLI} ${APP_ID}.desktop ${APP_ID}.service
 	mkdir -p '${DESTDIR}${PREFIX}/bin'
 	cp ${GJISHO} '${DESTDIR}${PREFIX}/bin'
 	cp ${GJISHO_CLI} '${DESTDIR}${PREFIX}/bin'
 	mkdir -p '${DESTDIR}${PREFIX}/share/applications'
-	cp gjisho.desktop '${DESTDIR}${PREFIX}/share/applications'
-	mkdir -p '${DESTDIR}${ICON_DIR}/hicolor/apps/scalable'
-	cp logo.svg '${DESTDIR}${ICON_DIR}/hicolor/apps/scalable/gjisho.svg'
+	sed 's_%BIN%_${DESTDIR}${PREFIX}/bin/gjisho_' ${APP_ID}.desktop >'${DESTDIR}${PREFIX}/share/applications/${APP_ID}.desktop'
+	mkdir -p '${DESTDIR}${ICON_DIR}/hicolor/scalable/apps'
+	cp logo.svg '${DESTDIR}${ICON_DIR}/hicolor/scalable/apps/${APP_ID}.svg'
 	for size in 48x48 128x128 192x192 256x256 512x512; do \
 		mkdir -p '${DESTDIR}${ICON_DIR}'/hicolor/$$size/apps; \
-		${CONVERT} -size $$size -background none logo.svg '${DESTDIR}${ICON_DIR}'/hicolor/$$size/apps/gjisho.png; \
+		${CONVERT} -size $$size -background none logo.svg '${DESTDIR}${ICON_DIR}'/hicolor/$$size/apps/${APP_ID}.png; \
 	done
+	mkdir -p '${DESTDIR}${PREFIX}/share/dbus-1/services'
+	sed 's_%BIN%_${DESTDIR}${PREFIX}/bin/gjisho_' ${APP_ID}.service >'${DESTDIR}${PREFIX}/share/dbus-1/services/${APP_ID}.service'
+
+programs: ${GJISHO} ${GJISHO_CLI}
 
 gui/bindata.go: ${GUI_BINDATA_SOURCES}
 	${GO} generate ./gui

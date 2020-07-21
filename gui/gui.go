@@ -16,7 +16,7 @@ import (
 	"github.com/ianprime0509/gjisho/dictdb"
 )
 
-const appID = "com.github.ianprime0509.gjisho"
+const appID = "xyz.ianjohnson.GJisho"
 
 var aboutDialog *gtk.AboutDialog
 
