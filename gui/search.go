@@ -268,6 +268,7 @@ func (ki *kanjiInput) initRadicals() {
 	sort.Ints(strokes)
 
 	for _, s := range strokes {
+		s := s
 		var heading string
 		if s == 1 {
 			heading = "1 stroke"
@@ -282,7 +283,6 @@ func (ki *kanjiInput) initRadicals() {
 		fb.SetMaxChildrenPerLine(10)
 		fb.SetSelectionMode(gtk.SELECTION_NONE)
 		for _, rad := range rads[s] {
-			rad := rad
 			lbl, _ := gtk.LabelNew(kanjiLabelMarkup(rad, false))
 			lbl.SetUseMarkup(true)
 			b, _ := gtk.FlowBoxChildNew()
@@ -294,15 +294,18 @@ func (ki *kanjiInput) initRadicals() {
 				ki.radicalsScrolledWindow.GetVAdjustment().SetValue(float64(fby + by))
 			})
 			fb.Add(b)
-			// Why can't I just use the activate signal on b itself? When I do
-			// so, it works via keyboard activation but not on click.
-			fb.Connect("child-activated", func(_ interface{}, child *gtk.FlowBoxChild) {
-				if child.GetIndex() == b.GetIndex() && b.GetSensitive() {
-					ki.toggleRadical(rad)
-					ki.updateResults()
-				}
-			})
 		}
+		// For some reason, connecting the activate signal of one of the
+		// children directly doesn't seem to work with mouse clicks (it works
+		// with keyboard activations, though). To get around this, we can just
+		// use the child-activated signal on the FlowBox, which does work.
+		fb.Connect("child-activated", func(_ interface{}, c *gtk.FlowBoxChild) {
+			if c.GetSensitive() {
+				rad := rads[s][c.GetIndex()]
+				ki.toggleRadical(rad)
+				ki.updateResults()
+			}
+		})
 		ki.radicalsBox.Add(fb)
 	}
 }
