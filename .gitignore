@@ -4,6 +4,7 @@
 *~
 *.sqlite
 *.sqlite-journal
+bindata.go
 /cmd/gjisho/gjisho
 /cmd/gjisho-cli/gjisho-cli
 /gjisho.sqlite
