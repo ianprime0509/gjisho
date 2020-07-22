@@ -39,7 +39,6 @@ func (kd *kanjiDetailsModal) fetchAndDisplay(c kanjidic.Character) {
 		} else {
 			log.Printf("Could not fetch kanji stroke information for %q: %v", c.Literal, err)
 		}
-		close(ch)
 	}()
 
 	go func() {

@@ -40,7 +40,6 @@ func (s *appSearch) search(query string) {
 		} else {
 			log.Printf("Lookup query error: %v", err)
 		}
-		close(ch)
 	}()
 
 	go func() {
@@ -371,7 +370,6 @@ func (ki *kanjiInput) updateResults() {
 		} else {
 			log.Printf("Error fetching kanji by radicals: %v", err)
 		}
-		close(ch)
 	}()
 
 	go func() {

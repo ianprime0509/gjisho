@@ -135,7 +135,6 @@ func (disp *entryDisplay) fetchAndDisplay(ctx context.Context, id int) {
 		} else {
 			log.Printf("Error fetching entry with ID %v: %v", id, err)
 		}
-		close(ch)
 	}()
 
 	go func() {
@@ -302,7 +301,6 @@ func (lst *kanjiList) fetchAndDisplay(ctx context.Context, kanji []string) {
 			}
 		}
 		ch <- results
-		close(ch)
 	}()
 
 	go func() {
@@ -368,7 +366,6 @@ func (lst *exampleList) fetchAndDisplay(ctx context.Context, word string) {
 		} else {
 			log.Printf("Error fetching examples for %q: %v", word, err)
 		}
-		close(ch)
 	}()
 
 	go func() {
