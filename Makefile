@@ -68,7 +68,7 @@ GJISHO_CLI_SOURCES=\
 all: ${GJISHO} ${GJISHO_CLI} gjisho.sqlite
 
 check: ${GJISHO_SOURCES} ${GJISHO_CLI_SOURCES}
-	${GO} test ./...
+	env CGO_CFLAGS='${CGO_CFLAGS}' CGO_LDFLAGS='${CGO_LDFLAGS}' ${GO} test ./...
 
 clean:
 	rm -f ${GJISHO} ${GJISHO_CLI} gjisho.sqlite \
@@ -121,10 +121,10 @@ ${SEARCH_PROVIDER_SKELETON}: org.gnome.ShellSearchProvider2.xml
 	mv shell-search-provider2.h shell-search-provider2.c gui
 
 ${GJISHO}: ${GJISHO_SOURCES}
-	cd cmd/gjisho && ${GO} build -tags fts5
+	cd cmd/gjisho && env CGO_CFLAGS='${CGO_CFLAGS}' CGO_LDFLAGS='${CGO_LDFLAGS}' ${GO} build -tags fts5
 
 ${GJISHO_CLI}: ${GJISHO_CLI_SOURCES}
-	cd cmd/gjisho-cli && ${GO} build -tags fts5
+	cd cmd/gjisho-cli && env CGO_CFLAGS='${CGO_CFLAGS}' CGO_LDFLAGS='${CGO_LDFLAGS}' ${GO} build -tags fts5
 
 gjisho.sqlite: ${GJISHO_CLI} ${TATOEBA_FILE} ${JMDICT_FILE} ${KANJIDIC_FILE} ${KANJIVG_FILE} ${KRADFILE_FILE}
 	${GJISHO_CLI} convert \
