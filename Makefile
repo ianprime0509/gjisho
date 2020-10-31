@@ -81,7 +81,7 @@ fetch:
 	${CURL} -L ${KANJIVG_URL} | ${GZIP} -d >'${KANJIVG_FILE}'
 	${CURL} -L ${KRADFILE_URL} | ${GZIP} -d | iconv -f euc-jp -t utf-8 >'${KRADFILE_FILE}'
 
-install: install-database install-program
+install: install-database install-programs
 
 install-database: gjisho.sqlite
 	mkdir -p '${DESTDIR}${PREFIX}/share/gjisho'
