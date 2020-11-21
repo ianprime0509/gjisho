@@ -22,7 +22,7 @@ type application struct {
 
 func init() {
 	tm := []glib.TypeMarshaler{
-		{glib.Type(C.gjisho_application_get_type()), marshalApplication},
+		{T: glib.Type(C.gjisho_application_get_type()), F: marshalApplication},
 	}
 	glib.RegisterGValueMarshalers(tm)
 }
@@ -34,9 +34,9 @@ func marshalApplication(p uintptr) (interface{}, error) {
 }
 
 func wrapApplication(obj *glib.Object) *application {
-	am := &glib.ActionMap{obj}
-	ag := &glib.ActionGroup{obj}
-	return &application{gtk.Application{glib.Application{obj, am, ag}}}
+	am := &glib.ActionMap{Object: obj}
+	ag := &glib.ActionGroup{Object: obj}
+	return &application{gtk.Application{Application: glib.Application{Object: obj, IActionMap: am, IActionGroup: ag}}}
 }
 
 func applicationNew() (*application, error) {
