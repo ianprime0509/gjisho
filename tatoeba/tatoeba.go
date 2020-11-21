@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/ianprime0509/gjisho/datautil"
@@ -27,9 +26,14 @@ type Tatoeba struct {
 
 // New returns a new Tatoeba using the given database.
 func New(db *sql.DB) (*Tatoeba, error) {
+	// TODO: consider relevance in query
 	fetchByWordQuery, err := db.Prepare(`SELECT data
-	FROM Example
-	WHERE id IN (SELECT DISTINCT example_id FROM ExampleLookup WHERE word = ?)`)
+	FROM Example a
+	JOIN (SELECT DISTINCT example_id, relevance FROM ExampleLookup WHERE word = ?) b
+	ON a.id = b.example_id
+	ORDER BY b.relevance DESC
+	LIMIT ?
+	OFFSET ?`)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare Tatoeba fetch by word query: %v", err)
 	}
@@ -57,7 +61,7 @@ func ConvertInto(txtPath string, db *sql.DB, progressCB func(int)) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare Example insert statement: %v", err)
 	}
-	insertLookup, err := tx.Prepare("INSERT INTO ExampleLookup VALUES (?, ?)")
+	insertLookup, err := tx.Prepare("INSERT INTO ExampleLookup VALUES (?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare ExampleLookup insert statement: %v", err)
 	}
@@ -107,6 +111,7 @@ func createTables(db *sql.DB) error {
 
 	_, err = db.Exec(`CREATE TABLE ExampleLookup (
 		word       TEXT NOT NULL,
+		relevance  INTEGER NOT NULL,
 		example_id INTEGER NOT NULL REFERENCES Example(id)
 	)`)
 	if err != nil {
@@ -131,7 +136,11 @@ func convertExample(ex Example, insertExample *sql.Stmt, insertLookup *sql.Stmt)
 		return fmt.Errorf("could not insert Example data for ID %q: %v", ex.ID, err)
 	}
 	for _, idx := range ex.Indices {
-		if _, err := insertLookup.Exec(idx.Word, ex.ID); err != nil {
+		relevance := 0
+		if idx.Good {
+			relevance = 1
+		}
+		if _, err := insertLookup.Exec(idx.Word, relevance, ex.ID); err != nil {
 			return fmt.Errorf("could not insert ExampleLookup data for ID %q: %v", ex.ID, err)
 		}
 	}
@@ -141,8 +150,8 @@ func convertExample(ex Example, insertExample *sql.Stmt, insertLookup *sql.Stmt)
 
 // FetchByWord returns all examples using the given word. The results are sorted
 // such that "better" examples of the word come first.
-func (tb *Tatoeba) FetchByWord(word string) ([]Example, error) {
-	rows, err := tb.fetchByWordQuery.Query(word)
+func (tb *Tatoeba) FetchByWord(word string, offset, limit int) ([]Example, error) {
+	rows, err := tb.fetchByWordQuery.Query(word, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %v", err)
 	}
@@ -164,9 +173,6 @@ func (tb *Tatoeba) FetchByWord(word string) ([]Example, error) {
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
 
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].relevance(word) > results[j].relevance(word)
-	})
 	return results, nil
 }
 

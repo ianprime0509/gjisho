@@ -19,36 +19,18 @@ import (
 
 // appSearch is a wrapper around the search-related components of the app.
 type appSearch struct {
-	toggle         *gtk.ToggleButton
-	revealer       *gtk.Revealer
-	entry          *gtk.SearchEntry
-	kanjiInput     *kanjiInput
-	results        *searchResultList
-	resultsKanji   *searchResultsKanji
-	cancelPrevious context.CancelFunc // a function to cancel the previous search
+	toggle       *gtk.ToggleButton
+	revealer     *gtk.Revealer
+	entry        *gtk.SearchEntry
+	kanjiInput   *kanjiInput
+	results      *searchResultList
+	resultsKanji *searchResultsKanji
 }
 
 // search searches using the given query.
-func (s *appSearch) search(query string) {
-	ctx := s.startSearch()
+func (s *appSearch) search(ctx context.Context, query string) {
 	s.resultsKanji.fetchAndDisplay(ctx, query)
-	ch := make(chan []jmdict.LookupResult)
-
-	go func() {
-		if results, err := db.JMdict.Lookup(query); err == nil {
-			ch <- results
-		} else {
-			log.Printf("Lookup query error: %v", err)
-		}
-	}()
-
-	go func() {
-		select {
-		case results := <-ch:
-			glib.IdleAdd(func() { s.results.set(results) })
-		case <-ctx.Done():
-		}
-	}()
+	s.results.search(ctx, query)
 }
 
 // toggleOpen toggles whether the search pane is open.
@@ -85,21 +67,27 @@ func (s *appSearch) insertEntryText(text string) {
 	search.entry.SetPosition(pos + utf8.RuneCountInString(text))
 }
 
-func (s *appSearch) startSearch() context.Context {
-	if s.cancelPrevious != nil {
-		s.cancelPrevious()
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	s.cancelPrevious = cancel
-	return ctx
-}
+// searchPageSize is the size of pages to fetch when searching.
+const searchPageSize = 50
 
 // searchResultList is a list of search results displayed in the GUI.
 type searchResultList struct {
 	list           *gtk.ListBox
 	scrolledWindow *gtk.ScrolledWindow
+	query          string
 	results        []jmdict.LookupResult
-	nDisplayed     int
+	atEnd          bool
+	fetch          fetchOperation
+}
+
+// clearResults clears the current search results.
+func (lst *searchResultList) clearResults() {
+	lst.results = lst.results[:0]
+	lst.atEnd = false
+	glib.IdleAdd(func() {
+		removeChildren(&lst.list.Container)
+		scrollToStart(lst.scrolledWindow)
+	})
 }
 
 // clearSelection clears the currently selected result.
@@ -116,22 +104,48 @@ func (lst *searchResultList) selected() *jmdict.LookupResult {
 	return nil
 }
 
-// set sets the currently displayed search results.
-func (lst *searchResultList) set(results []jmdict.LookupResult) {
-	lst.results = results
-	removeChildren(&lst.list.Container)
-	lst.nDisplayed = 0
-	lst.showMore()
-	scrollToStart(lst.scrolledWindow)
+// search starts a new search with the given query.
+func (lst *searchResultList) search(ctx context.Context, query string) {
+	lst.clearResults()
+	lst.query = query
+	lst.showMore(ctx)
 }
 
 // showMore displays more search results in the list.
-func (lst *searchResultList) showMore() {
-	maxIndex := lst.nDisplayed + 50
-	for ; lst.nDisplayed < len(lst.results) && lst.nDisplayed < maxIndex; lst.nDisplayed++ {
-		lst.list.Add(newSearchResult(lst.results[lst.nDisplayed]))
+func (lst *searchResultList) showMore(ctx context.Context) {
+	if lst.atEnd {
+		return
 	}
-	lst.list.ShowAll()
+
+	ctx = lst.fetch.start(ctx)
+	query := lst.query
+	offset := len(lst.results)
+	ch := make(chan []jmdict.LookupResult)
+
+	go func() {
+		if res, err := db.JMdict.Lookup(query, offset, searchPageSize); err == nil {
+			ch <- res
+		} else {
+			log.Printf("Lookup query error: %v", err)
+		}
+	}()
+
+	go func() {
+		select {
+		case res := <-ch:
+			lst.results = append(lst.results, res...)
+			if len(res) < searchPageSize {
+				lst.atEnd = true
+			}
+			glib.IdleAdd(func() {
+				for _, entry := range res {
+					lst.list.Add(newSearchResult(entry))
+				}
+				lst.list.ShowAll()
+			})
+		case <-ctx.Done():
+		}
+	}()
 }
 
 // newSearchResult creates a search result widget for display.
@@ -169,11 +183,13 @@ func newSearchResult(entry jmdict.LookupResult) *gtk.Box {
 type searchResultsKanji struct {
 	box   *gtk.FlowBox
 	kanji []kanjidic.Character
+	fetch fetchOperation
 }
 
 // fetchAndDisplay fetches and displays information about the kanji related to
 // the given search query.
 func (srk *searchResultsKanji) fetchAndDisplay(ctx context.Context, query string) {
+	ctx = srk.fetch.start(ctx)
 	kanji := associatedKanji(query)
 	// Kanji lookup is fast enough that for now I'm just fetching in sequence
 	ch := make(chan []kanjidic.Character)

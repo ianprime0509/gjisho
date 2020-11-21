@@ -26,7 +26,9 @@ func New(db *sql.DB) (*JMdict, error) {
 	lookupQuery, err := db.Prepare(`SELECT heading, primary_reading, gloss_summary, all_writings, priority, id
 	FROM EntryLookup
 	WHERE EntryLookup MATCH ?
-	ORDER BY -bm25(EntryLookup, 10, 4, 2) + 2 * priority DESC`)
+	ORDER BY -bm25(EntryLookup, 10, 4, 2) + 2 * priority DESC
+	LIMIT ?
+	OFFSET ?`)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare JMdict lookup query: %v", err)
 	}
@@ -170,12 +172,12 @@ func (dict *JMdict) Fetch(id int) (Entry, error) {
 
 // Lookup looks up dictionary entries according to the given query. The results
 // are sorted such that the ones deemed most relevant to the query come first.
-func (dict *JMdict) Lookup(query string) ([]LookupResult, error) {
+func (dict *JMdict) Lookup(query string, offset, limit int) ([]LookupResult, error) {
 	if query == "" {
 		return nil, nil
 	}
 
-	results, err := dict.lookupRaw(convertQuery(query))
+	results, err := dict.lookupRaw(convertQuery(query), offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +196,7 @@ func (dict *JMdict) LookupByRef(ref string) (LookupResult, error) {
 		reading = parts[1]
 	}
 
-	results, err := dict.lookupRaw(fmt.Sprintf(`"%v"`, strings.ReplaceAll(parts[0], `"`, `""`)))
+	results, err := dict.lookupRaw(fmt.Sprintf(`"%v"`, strings.ReplaceAll(parts[0], `"`, `""`)), 0, 100)
 	if err != nil {
 		return LookupResult{}, fmt.Errorf("could not search for reference %q: %v", ref, err)
 	}
@@ -230,8 +232,8 @@ func (dict *JMdict) LookupByRef(ref string) (LookupResult, error) {
 
 // lookupRaw is the same as Lookup, but uses a raw FTS5 query rather than a
 // converted one and does not sort the results in any particular order.
-func (dict *JMdict) lookupRaw(query string) ([]LookupResult, error) {
-	rows, err := dict.lookupQuery.Query(query)
+func (dict *JMdict) lookupRaw(query string, offset, limit int) ([]LookupResult, error) {
+	rows, err := dict.lookupQuery.Query(query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %v", err)
 	}

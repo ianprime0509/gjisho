@@ -349,19 +349,49 @@ func newKanjiListRow(c kanjidic.Character) *gtk.ListBoxRow {
 	return row
 }
 
+// examplePageSize is the size of pages to fetch when getting examples.
+const examplePageSize = 20
+
 // exampleList is a list of examples associated with an entry.
 type exampleList struct {
 	scrolledWindow *gtk.ScrolledWindow
 	list           *gtk.ListBox
+	word           string
 	examples       []tatoeba.Example
-	nDisplayed     int
+	atEnd          bool
+	fetch          fetchOperation
+}
+
+// clearResults clears the example list.
+func (lst *exampleList) clearResults() {
+	lst.examples = lst.examples[:0]
+	lst.atEnd = false
+	glib.IdleAdd(func() {
+		removeChildren(&lst.list.Container)
+		scrollToStart(lst.scrolledWindow)
+	})
 }
 
 // fetchAndDisplay fetches and displays examples for the given word in the list.
 func (lst *exampleList) fetchAndDisplay(ctx context.Context, word string) {
+	lst.clearResults()
+	lst.word = word
+	lst.showMore(ctx)
+}
+
+// showMore displays more examples in the list.
+func (lst *exampleList) showMore(ctx context.Context) {
+	if lst.atEnd {
+		return
+	}
+
+	ctx = lst.fetch.start(ctx)
+	word := lst.word
+	offset := len(lst.examples)
 	ch := make(chan []tatoeba.Example)
+
 	go func() {
-		if examples, err := db.Tatoeba.FetchByWord(word); err == nil {
+		if examples, err := db.Tatoeba.FetchByWord(word, offset, examplePageSize); err == nil {
 			ch <- examples
 		} else {
 			log.Printf("Error fetching examples for %q: %v", word, err)
@@ -371,27 +401,19 @@ func (lst *exampleList) fetchAndDisplay(ctx context.Context, word string) {
 	go func() {
 		select {
 		case examples := <-ch:
-			glib.IdleAdd(func() { lst.display(examples) })
+			lst.examples = append(lst.examples, examples...)
+			if len(examples) < examplePageSize {
+				lst.atEnd = true
+			}
+			glib.IdleAdd(func() {
+				for _, ex := range examples {
+					lst.list.Add(newExampleListRow(ex))
+				}
+				lst.list.ShowAll()
+			})
 		case <-ctx.Done():
 		}
 	}()
-}
-
-// showMore displays more examples in the list.
-func (lst *exampleList) showMore() {
-	maxIndex := lst.nDisplayed + 20
-	for ; lst.nDisplayed < maxIndex && lst.nDisplayed < len(lst.examples); lst.nDisplayed++ {
-		lst.list.Add(newExampleListRow(lst.examples[lst.nDisplayed]))
-	}
-	lst.list.ShowAll()
-}
-
-func (lst *exampleList) display(examples []tatoeba.Example) {
-	removeChildren(&lst.list.Container)
-	lst.nDisplayed = 0
-	lst.examples = examples
-	lst.showMore()
-	scrollToStart(lst.scrolledWindow)
 }
 
 func newExampleListRow(ex tatoeba.Example) *gtk.ListBoxRow {

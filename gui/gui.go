@@ -4,6 +4,7 @@
 package gui
 
 import (
+	"context"
 	"log"
 	"net/url"
 	"os"
@@ -111,7 +112,7 @@ var signals = map[string]interface{}{
 	},
 	"examplesEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
 		if pos == gtk.POS_BOTTOM {
-			navigation.disp.examples.showMore()
+			navigation.disp.examples.showMore(context.Background())
 		}
 	},
 	"exampleListRowActivated": func(_ *gtk.ListBox, row *gtk.ListBoxRow) {
@@ -138,12 +139,12 @@ var signals = map[string]interface{}{
 	"navigateForward": navigation.goForward,
 	"searchChanged": func(entry *gtk.SearchEntry) {
 		query, _ := entry.GetText()
-		search.search(query)
+		search.search(context.Background(), query)
 	},
 	"searchEntryKeyPress": adaptKeyHandler(searchEntryKeyMap),
 	"searchResultsEdgeReached": func(_ *gtk.ScrolledWindow, pos gtk.PositionType) {
 		if pos == gtk.POS_BOTTOM {
-			search.results.showMore()
+			search.results.showMore(context.Background())
 		}
 	},
 	"searchResultsKanjiChildActivated": func(_ *gtk.FlowBox, child *gtk.FlowBoxChild) {

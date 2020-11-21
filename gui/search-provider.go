@@ -65,7 +65,7 @@ type searchResultMeta struct {
 }
 
 func fetchResultIds(query string) []string {
-	res, err := db.JMdict.Lookup(query)
+	res, err := db.JMdict.Lookup(query, 0, 10)
 	if err != nil {
 		log.Printf("Error fetching result IDs for search: %v", err)
 		return nil
