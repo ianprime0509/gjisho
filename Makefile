@@ -12,7 +12,6 @@ GJISHO_CLI=cmd/gjisho-cli/gjisho-cli
 
 CONVERT=convert
 CURL=curl
-GDBUS_CODEGEN=gdbus-codegen
 GO=go
 GZIP=gzip
 
@@ -106,19 +105,11 @@ install-programs: ${GJISHO} ${GJISHO_CLI} ${APP_ID}.desktop ${APP_ID}.service ${
 
 programs: ${GJISHO} ${GJISHO_CLI}
 
-gui/bindata.go: ${GUI_BINDATA_SOURCES}
+gui/bindata.go ${SEARCH_PROVIDER_SKELETON}: ${GUI_BINDATA_SOURCES}
 	${GO} generate ./gui
 
 gui/data/logo.svg: logo.svg
 	cp logo.svg gui/data/logo.svg
-
-${SEARCH_PROVIDER_SKELETON}: org.gnome.ShellSearchProvider2.xml
-	${GDBUS_CODEGEN} \
-		--c-namespace Shell \
-		--generate-c-code shell-search-provider2 \
-		--interface-prefix org.gnome.Shell. \
-		org.gnome.ShellSearchProvider2.xml
-	mv shell-search-provider2.h shell-search-provider2.c gui
 
 ${GJISHO}: ${GJISHO_SOURCES}
 	cd cmd/gjisho && env CGO_CFLAGS='${CGO_CFLAGS}' CGO_LDFLAGS='${CGO_LDFLAGS}' ${GO} build -tags fts5

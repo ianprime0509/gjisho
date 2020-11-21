@@ -1,3 +1,5 @@
+//go:generate gdbus-codegen --c-namespace Shell --generate-c-code shell-search-provider2 --interface-prefix org.gnome.Shell. org.gnome.ShellSearchProvider2.xml
+
 package gui
 
 // #include "application.h"
